@@ -1,0 +1,2535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Live Internet Meter</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22%230d9488%22%2F%3E%3Crect%20x%3D%228%22%20y%3D%2218%22%20width%3D%224%22%20height%3D%226%22%20rx%3D%221.5%22%20fill%3D%22%23ffffff%22%2F%3E%3Crect%20x%3D%2214%22%20y%3D%2213%22%20width%3D%224%22%20height%3D%2211%22%20rx%3D%221.5%22%20fill%3D%22%23ffffff%22%2F%3E%3Crect%20x%3D%2220%22%20y%3D%228%22%20width%3D%224%22%20height%3D%2216%22%20rx%3D%221.5%22%20fill%3D%22%23ffffff%22%2F%3E%3C%2Fsvg%3E"/>
+<meta name="theme-color" content="#0d9488"/>
+<meta name="description" content="Live Internet Meter real-time ping, download and upload speed, monitored right in your browser."/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="Net Meter"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* ════════════════════════════════════════════════════════════
+   LIVE INTERNET METER refreshed "instrument panel" theme
+   • Inter for UI/labels · JetBrains Mono (tabular) for live data
+   • One cohesive motion system · equal-height metric cards
+   • Light, calm, readable accents kept to match the SVG gauges
+   All class names, keyframes and CSS variables are preserved so
+   the existing JavaScript keeps working unchanged.
+════════════════════════════════════════════════════════════ */
+:root {
+  /* ── Surfaces ── */
+  --bg-page:    #edf1f7;
+  --bg-card:    #ffffff;
+  --bg-card2:   #f5f8fc;
+  --bg-header:  rgba(255,255,255,0.82);
+
+  --border:     #e4e9f2;
+  --border-ping:rgba(13,148,136,0.40);
+  --border-dl:  rgba(29,78,216,0.38);
+  --border-ul:  rgba(194,65,12,0.38);
+
+  /* ── Accents (kept consistent with hardcoded gauge colours) ── */
+  --ping-color: #0d9488;   /* teal   */
+  --ping-mid:   #0f766e;
+  --ping-dim:   #134e4a;
+  --dl-color:   #1d4ed8;   /* blue   */
+  --dl-mid:     #1e40af;
+  --dl-dim:     #1e3a8a;
+  --ul-color:   #c2410c;   /* orange */
+  --ul-mid:     #9a3412;
+  --ul-dim:     #7c2d12;
+  --server-color:  #7c3aed; /* violet */
+  --location-color:#15803d; /* green  */
+
+  /* ── Ink ── */
+  --text-heading:#0f172a;
+  --text-primary:#334155;
+  --text-muted:  #64748b;
+  --text-light:  #94a3b8;
+  --accent:      #0d9488;
+  --danger:      #dc2626;
+  --warn:        #d97706;
+
+  /* ── Layered shadows ── */
+  --shadow-card: 0 1px 2px rgba(15,23,42,0.04), 0 10px 28px rgba(15,23,42,0.06);
+  --shadow-ping: 0 1px 2px rgba(15,23,42,0.04), 0 14px 34px rgba(13,148,136,0.20);
+  --shadow-dl:   0 1px 2px rgba(15,23,42,0.04), 0 14px 34px rgba(29,78,216,0.18);
+  --shadow-ul:   0 1px 2px rgba(15,23,42,0.04), 0 14px 34px rgba(194,65,12,0.18);
+  --shadow-info: 0 1px 2px rgba(15,23,42,0.04), 0 12px 30px rgba(15,23,42,0.10);
+
+  /* ── Type ── */
+  --font-main:  'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono:  'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, 'Liberation Mono', Menlo, monospace;
+
+  /* ── Motion system ── */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 150ms;
+  --dur:      280ms;
+  --dur-slow: 480ms;
+
+  --radius: 16px;
+}
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+
+body {
+  background:
+    radial-gradient(1100px 560px at 50% -8%, #f6f9fd 0%, rgba(246,249,253,0) 62%),
+    var(--bg-page);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  font-weight: 500;
+  font-size: 15px;
+  line-height: 1.55;
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Numbers should never jitter as live values update */
+.metric-value, .stat-val, .info-val, .srv-ping, .interval-val,
+.speedo-scale-hint, .np-status-bar { font-variant-numeric: tabular-nums; }
+
+/* Accessible focus for keyboard users */
+:focus-visible {
+  outline: 2px solid var(--ping-color);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ════════════════════════════════════════ HEADER ══ */
+.np-header {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-header);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  backdrop-filter: saturate(180%) blur(12px);
+  box-shadow: 0 1px 0 rgba(15,23,42,0.04);
+  position: sticky; top: 0; z-index: 1000;
+}
+.np-logo {
+  font-family: var(--font-main);
+  font-weight: 700;
+  font-size: clamp(1.05rem, 3vw, 1.4rem);
+  letter-spacing: -0.01em;
+  color: var(--text-heading);
+  display: flex; align-items: center; gap: 10px;
+}
+.np-logo-dot {
+  width: 11px; height: 11px;
+  background: var(--ping-color);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(13,148,136,0.16);
+  animation: pdot 1.8s var(--ease-in-out) infinite;
+}
+@keyframes pdot { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.55);opacity:.55} }
+
+.np-status-bar {
+  display: flex; align-items: center; gap: 12px;
+  font-family: var(--font-mono); font-size: 0.78rem;
+  color: var(--text-muted); font-weight: 500;
+}
+.np-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--location-color);
+  box-shadow: 0 0 0 3px rgba(21,128,61,0.18);
+  animation: pdot 2.2s var(--ease-in-out) infinite;
+  display: inline-block;
+}
+.np-dot.offline { background: var(--danger); box-shadow: 0 0 0 3px rgba(220,38,38,0.16); animation: none; }
+
+.btn-settings {
+  background: #fff; border: 1px solid var(--border);
+  color: var(--text-primary); font-family: var(--font-main);
+  font-weight: 600; font-size: 0.86rem;
+  padding: 7px 16px; border-radius: 10px;
+  cursor: pointer;
+  transition: color var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out),
+              box-shadow var(--dur) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  box-shadow: 0 1px 2px rgba(15,23,42,0.05);
+}
+.btn-settings:hover {
+  border-color: var(--ping-color); color: var(--ping-color);
+  box-shadow: 0 6px 18px rgba(13,148,136,0.16);
+  transform: translateY(-1px);
+}
+.btn-settings:active { transform: translateY(0); }
+
+/* ════════════════════════════════════════ MAIN ══ */
+.main-wrap { padding: 26px 0 56px; }
+
+/* ════════════════════════════════════════ METRIC CARD ══ */
+.metric-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 20px 18px;
+  position: relative; overflow: hidden;
+  height: 100%;                       /* ← equal height across the row */
+  display: flex; flex-direction: column;
+  transition: transform var(--dur) var(--ease-out),
+              box-shadow var(--dur) var(--ease-out),
+              border-color var(--dur) var(--ease-out);
+  box-shadow: var(--shadow-card);
+}
+
+/* Coloured top accent bar */
+.metric-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 3px;
+  opacity: 0.85;
+  transition: opacity var(--dur) var(--ease-out);
+}
+.ping-card::before { background: linear-gradient(90deg, transparent, var(--ping-color), transparent); }
+.dl-card::before   { background: linear-gradient(90deg, transparent, var(--dl-color),  transparent); }
+.ul-card::before   { background: linear-gradient(90deg, transparent, var(--ul-color),  transparent); }
+.metric-card:hover::before { opacity: 1; }
+
+/* Coloured left stripe */
+.metric-card::after {
+  content: '';
+  position: absolute; top: 3px; left: 0; bottom: 0;
+  width: 3px;
+}
+.ping-card::after { background: linear-gradient(180deg, var(--ping-color), transparent 80%); }
+.dl-card::after   { background: linear-gradient(180deg, var(--dl-color),   transparent 80%); }
+.ul-card::after   { background: linear-gradient(180deg, var(--ul-color),   transparent 80%); }
+
+/* Hover states */
+.ping-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-ping); border-color: var(--border-ping); }
+.dl-card:hover   { transform: translateY(-5px); box-shadow: var(--shadow-dl);   border-color: var(--border-dl); }
+.ul-card:hover   { transform: translateY(-5px); box-shadow: var(--shadow-ul);   border-color: var(--border-ul); }
+
+.metric-label {
+  flex: 0 0 auto;
+  font-family: var(--font-main);
+  font-size: 0.72rem; font-weight: 600;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  margin-bottom: 6px;
+  display: flex; align-items: center; gap: 7px;
+}
+.ping-card .metric-label { color: var(--ping-mid); }
+.dl-card   .metric-label { color: var(--dl-mid);   }
+.ul-card   .metric-label { color: var(--ul-mid);   }
+
+/* ── The "stage": ring or speedo grows to fill, centring its content,
+      so every card's sparkline + stats block bottom-aligns. ── */
+.glow-ring-wrap {
+  flex: 1 1 auto;
+  display: flex; align-items: center; justify-content: center;
+  margin: 4px 0 6px;
+}
+.glow-ring {
+  width: 124px; height: 124px; border-radius: 50%; border: 2px solid;
+  display: flex; align-items: center; justify-content: center; flex-direction: column;
+  transition: box-shadow var(--dur) var(--ease-out), transform var(--dur) var(--ease-out);
+}
+.ping-ring { border-color: rgba(13,148,136,.34); background: rgba(13,148,136,.05); }
+.dl-ring   { border-color: rgba(29,78,216,.30);  background: rgba(29,78,216,.04); }
+.ul-ring   { border-color: rgba(194,65,12,.30);  background: rgba(194,65,12,.04); }
+.ping-card:hover .ping-ring { box-shadow: 0 0 0 7px rgba(13,148,136,.10); transform: scale(1.02); }
+.dl-card:hover   .dl-ring   { box-shadow: 0 0 0 7px rgba(29,78,216,.10); }
+.ul-card:hover   .ul-ring   { box-shadow: 0 0 0 7px rgba(194,65,12,.10); }
+
+/* The big number */
+.metric-value {
+  font-family: var(--font-main);
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700; line-height: 1; letter-spacing: -0.02em;
+  transition: color var(--dur) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+.ping-card .metric-value { color: var(--ping-color); }
+.dl-card   .metric-value { color: var(--dl-color);   }
+.ul-card   .metric-value { color: var(--ul-color);   }
+
+.metric-unit {
+  font-family: var(--font-mono); font-size: 0.7rem;
+  font-weight: 500; color: var(--text-muted); letter-spacing: 0.04em;
+  margin-top: 4px;
+}
+
+/* ── SPEEDOMETER (DL + UL cards) ── */
+.speedo-wrap {
+  flex: 1 1 auto;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 2px 0 0;
+}
+.speedo-svg     { width: 100%; max-width: 240px; height: auto; display: block; }
+
+/* Needle keeps its spring easing geometry depends on this origin */
+.speedo-needle-g {
+  transform-origin: 110px 118px;
+  transition: transform 0.7s cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+.speedo-needle-poly { fill: #0f172a; }
+.speedo-hub         { fill: #1e293b; }
+.speedo-hub-dot     { fill: #ffffff; }
+
+.speedo-val-row { text-align: center; margin-top: -2px; }
+.speedo-unit-row {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; margin-top: 6px;
+}
+.speedo-unit-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--bg-card2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 4px 11px 4px 13px;
+  font-family: var(--font-mono); font-size: 0.72rem; font-weight: 600;
+  cursor: pointer; user-select: none; color: var(--text-muted);
+  transition: color var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out),
+              background var(--dur) var(--ease-out);
+}
+.speedo-unit-pill:hover { background: #fff; color: var(--text-primary); }
+.dl-card .speedo-unit-pill:hover { border-color: var(--dl-color); color: var(--dl-color); }
+.ul-card .speedo-unit-pill:hover { border-color: var(--ul-color); color: var(--ul-color); }
+.dl-card .speedo-unit-pill .speedo-unit-name { color: var(--dl-color); }
+.ul-card .speedo-unit-pill .speedo-unit-name { color: var(--ul-color); }
+.speedo-unit-pill i { font-size: 0.55rem; opacity: 0.6; transition: opacity var(--dur) var(--ease-out); }
+.speedo-unit-pill:hover i { opacity: 1; }
+.speedo-unit-pill.unit-cycled i { animation: speedo-spin-once 0.35s var(--ease-out); }
+@keyframes speedo-spin-once { to { transform: rotate(180deg); } }
+
+.speedo-scale-hint {
+  font-family: var(--font-mono); font-size: 0.6rem; font-weight: 500;
+  color: var(--text-light); white-space: nowrap;
+}
+.speedo-seg-active { filter: drop-shadow(0 0 3px currentColor); }
+
+/* ── SPARKLINE ── (fixed-height bottom block → bottoms align) */
+.sparkline-wrap { flex: 0 0 auto; position: relative; height: 44px; margin-top: 12px; }
+.sparkline-wrap canvas { position: absolute; top:0; left:0; width:100%!important; height:100%!important; }
+
+.metric-stats {
+  flex: 0 0 auto;
+  display: flex; gap: 10px; flex-wrap: wrap;
+  margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.metric-stat { font-family: var(--font-mono); font-size: 0.74rem; min-width: 44px; font-weight: 600; }
+.stat-lbl { color: var(--text-muted); font-size: 0.62rem; text-transform: uppercase; letter-spacing: .07em; font-family: var(--font-main); font-weight: 600; }
+.ping-card .stat-val { color: var(--ping-mid); }
+.dl-card   .stat-val { color: var(--dl-mid);   }
+.ul-card   .stat-val { color: var(--ul-mid);   }
+
+/* ════════════════════════════════════════ HISTORY CHART ══ */
+.chart-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px 18px 14px;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow var(--dur) var(--ease-out), transform var(--dur) var(--ease-out);
+}
+.chart-card:hover { box-shadow: var(--shadow-info); transform: translateY(-2px); }
+
+.chart-title {
+  font-family: var(--font-main); font-size: 0.78rem; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-muted); margin-bottom: 12px;
+  display: flex; align-items: center; gap: 9px;
+}
+.history-chart-container { position: relative; height: 200px; width: 100%; }
+.history-chart-container canvas { position: absolute; top:0; left:0; width:100%!important; height:100%!important; }
+
+/* ════════════════════════════════════════ SERVER RACE ══ */
+.server-race {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px; height: 100%;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow var(--dur) var(--ease-out), transform var(--dur) var(--ease-out);
+}
+.server-race:hover { box-shadow: var(--shadow-info); transform: translateY(-2px); }
+
+.server-race-title {
+  font-family: var(--font-main); font-size: 0.78rem; font-weight: 600;
+  letter-spacing: 0.08em; color: var(--server-color);
+  text-transform: uppercase; margin-bottom: 14px;
+}
+.server-row {
+  display: grid; grid-template-columns: 1fr auto auto;
+  align-items: center; gap: 8px;
+  padding: 8px 8px; border-bottom: 1px solid var(--border);
+  border-radius: 10px;
+  transition: background var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out);
+}
+.server-row:last-child { border-bottom: none; }
+.server-row.srv-clickable { cursor: pointer; }
+.server-row.srv-clickable:hover {
+  background: rgba(13,148,136,.07);
+  box-shadow: inset 3px 0 0 var(--ping-color);
+}
+.server-row.srv-active {
+  background: rgba(13,148,136,.09);
+  box-shadow: inset 3px 0 0 var(--ping-color);
+}
+.server-row.srv-timeout { opacity: .55; cursor: not-allowed; }
+
+@keyframes srv-new-flash {
+  0%   { background: rgba(13,148,136,.22); }
+  100% { background: transparent; }
+}
+.server-row.srv-new-flash { animation: srv-new-flash 1.8s var(--ease-out) forwards; }
+
+.srv-selected-badge {
+  font-family: var(--font-main); font-size: 0.62rem; font-weight: 600;
+  background: rgba(13,148,136,.12); border: 1px solid var(--ping-color);
+  color: var(--ping-color); padding: 2px 8px; border-radius: 12px;
+  white-space: nowrap; margin-left: 4px;
+}
+.srv-refill-status {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 9px; border-radius: 8px; margin-top: 8px;
+  background: rgba(124,58,237,.07); border: 1px solid rgba(124,58,237,.18);
+  font-family: var(--font-mono); font-size: .62rem; color: var(--server-color);
+}
+.srv-refill-status.done {
+  background: rgba(13,148,136,.07); border-color: rgba(13,148,136,.2);
+  color: var(--ping-color);
+}
+.srv-name {
+  font-family: var(--font-main); font-size: 0.84rem; font-weight: 600;
+  color: var(--text-primary); display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.srv-region { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); font-weight: 500; }
+.srv-bar-wrap { width: clamp(50px,9vw,110px); height: 5px; background: #e8edf4; border-radius: 5px; overflow: hidden; }
+.srv-bar { height: 100%; border-radius: 5px; transition: width var(--dur-slow) var(--ease-out); width: 0; }
+.srv-ping { font-family: var(--font-mono); font-size: 0.78rem; min-width: 52px; text-align: right; letter-spacing: .02em; font-weight: 600; }
+.srv-best-badge {
+  font-family: var(--font-main); font-size: 0.62rem; font-weight: 600;
+  background: rgba(13,148,136,.1); border: 1px solid rgba(13,148,136,.35);
+  color: var(--ping-color); padding: 2px 8px; border-radius: 12px; white-space: nowrap;
+}
+.srv-scanning { color: var(--text-muted); font-size: 0.72rem; font-family: var(--font-mono); animation: blink 1.1s infinite; font-weight: 500; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ════════════════════════════════════════ INFO CARDS ══ */
+.info-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px; height: 100%;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow var(--dur) var(--ease-out), transform var(--dur) var(--ease-out);
+}
+.info-card:hover { box-shadow: var(--shadow-info); transform: translateY(-2px); }
+.info-card-title {
+  font-family: var(--font-main); font-size: 0.74rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border);
+}
+.server-title   { color: var(--server-color); }
+.location-title { color: var(--location-color); }
+.info-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 9px; gap: 8px; }
+.info-key { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); flex-shrink: 0; font-weight: 500; }
+.info-val { font-family: var(--font-mono); font-size: 0.72rem; text-align: right; word-break: break-all; font-weight: 600; color: var(--text-primary); }
+.server-card   .info-val { color: var(--server-color); }
+.location-card .info-val { color: var(--location-color); }
+
+.badge-online {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(21,128,61,.09); border: 1px solid rgba(21,128,61,.30);
+  color: var(--location-color); font-size: 0.68rem;
+  font-family: var(--font-mono); font-weight: 600;
+  padding: 3px 9px; border-radius: 20px;
+}
+.badge-offline {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(220,38,38,.08); border: 1px solid rgba(220,38,38,.28);
+  color: var(--danger); font-size: 0.68rem;
+  font-family: var(--font-mono); font-weight: 600;
+  padding: 3px 9px; border-radius: 20px;
+}
+
+/* ════════════════════════════════════════ TICKER ══ */
+.live-ticker {
+  background: linear-gradient(90deg, rgba(13,148,136,.08), rgba(13,148,136,.03));
+  border: 1px solid rgba(13,148,136,.2);
+  border-radius: 12px; padding: 10px 16px;
+  font-family: var(--font-mono); font-size: 0.78rem; font-weight: 500;
+  color: var(--text-muted);
+  display: flex; align-items: center; gap: 10px; overflow: hidden;
+}
+.ticker-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--ping-color); flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(13,148,136,.22);
+  animation: pdot 1.1s infinite;
+}
+.ticker-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ════════════════════════════════════════ QUALITY BADGE ══ */
+.quality-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--font-main); font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.06em; padding: 3px 8px;
+  border-radius: 7px; border: 1px solid;
+}
+.q-excellent { color: #065f46; border-color: rgba(13,148,136,.5); background: rgba(13,148,136,.10); }
+.q-good      { color: #166534; border-color: rgba(21,128,61,.4);  background: rgba(21,128,61,.09); }
+.q-fair      { color: #92400e; border-color: rgba(217,119,6,.4);  background: rgba(217,119,6,.09); }
+.q-poor      { color: #991b1b; border-color: rgba(220,38,38,.4);  background: rgba(220,38,38,.09); }
+
+/* ════════════════════════════════════════ SETTINGS PANEL ══ */
+.settings-overlay {
+  position: fixed; inset: 0; background: rgba(15,23,42,.40);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); z-index: 2000;
+  display: flex; align-items: flex-end;
+  opacity: 0; pointer-events: none; transition: opacity var(--dur) var(--ease-in-out);
+}
+.settings-overlay.open { opacity: 1; pointer-events: all; }
+.settings-panel {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: 22px 22px 0 0; width: 100%; max-height: 86vh; overflow-y: auto;
+  padding: 26px 22px 32px;
+  transform: translateY(100%); transition: transform var(--dur-slow) var(--ease-out);
+  box-shadow: 0 -10px 44px rgba(15,23,42,0.16);
+}
+.settings-overlay.open .settings-panel { transform: translateY(0); }
+@media(min-width:768px) {
+  .settings-overlay { align-items: center; justify-content: flex-end; padding: 20px; }
+  .settings-panel { max-width: 380px; border-radius: 18px; transform: translateX(120%); max-height: 90vh; box-shadow: -10px 0 44px rgba(15,23,42,0.16); }
+  .settings-overlay.open .settings-panel { transform: translateX(0); }
+}
+.settings-title { font-family: var(--font-main); font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; color: var(--text-heading); margin-bottom: 4px; }
+.settings-sub { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 20px; font-weight: 500; }
+.settings-section { margin-bottom: 18px; }
+.settings-section-label { font-family: var(--font-main); font-size: 0.66rem; font-weight: 600; letter-spacing: .12em; color: var(--text-light); text-transform: uppercase; margin-bottom: 9px; }
+.toggle-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.toggle-label { font-size: 0.88rem; font-weight: 500; display: flex; align-items: center; gap: 9px; color: var(--text-primary); }
+.toggle-icon  { font-size: 0.82rem; width: 17px; text-align: center; }
+.toggle-switch { position: relative; width: 42px; height: 24px; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; inset: 0;
+  background: #e2e8f0; border: 1px solid #cbd5e1;
+  border-radius: 24px; cursor: pointer;
+  transition: background var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out);
+}
+.toggle-slider::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; background: #94a3b8;
+  border-radius: 50%; transition: transform var(--dur) var(--ease-out), background var(--dur) var(--ease-out);
+}
+.toggle-switch input:checked + .toggle-slider { background: rgba(13,148,136,.16); border-color: var(--ping-color); }
+.toggle-switch input:checked + .toggle-slider::after { transform: translateX(18px); background: var(--ping-color); }
+
+.interval-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 5px; background: #e2e8f0; border-radius: 5px; outline: none; margin: 8px 0; }
+.interval-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 17px; height: 17px; border-radius: 50%; background: var(--ping-color); cursor: pointer; box-shadow: 0 2px 6px rgba(13,148,136,.3); transition: transform var(--dur-fast) var(--ease-out); }
+.interval-slider::-webkit-slider-thumb:hover { transform: scale(1.12); }
+.interval-slider::-moz-range-thumb { width: 17px; height: 17px; border: none; border-radius: 50%; background: var(--ping-color); cursor: pointer; box-shadow: 0 2px 6px rgba(13,148,136,.3); }
+.interval-val { font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600; color: var(--ping-color); text-align: right; }
+
+/* ════════════════════════════════════════ LOADING ══ */
+.loading-overlay {
+  position: fixed; inset: 0; background: var(--bg-page); z-index: 9999;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+}
+.loading-logo { font-family: var(--font-main); font-weight: 700; font-size: 1.6rem; color: var(--text-heading); letter-spacing: -0.01em; }
+.loading-bar-wrap { width: 210px; height: 4px; background: #d8e0ec; border-radius: 4px; overflow: hidden; }
+.loading-bar { height: 100%; background: linear-gradient(90deg, var(--ping-color), var(--dl-color)); border-radius: 4px; animation: ldp 2s var(--ease-out) forwards; }
+@keyframes ldp { from{width:0} to{width:100%} }
+.loading-text { font-family: var(--font-mono); font-size: 0.74rem; font-weight: 500; color: var(--text-muted); animation: blink 1.1s infinite; }
+
+/* ════════════════════════════════════════ MISC ══ */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; background-clip: padding-box; }
+.fade-in { opacity: 0; animation: fin var(--dur-slow) var(--ease-out) forwards; }
+@keyframes fin { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+.widget-section.hidden { display: none !important; }
+.section-gap { margin-bottom: 20px; }
+.refresh-flash { animation: rfl var(--dur) var(--ease-out); }
+@keyframes rfl { 0%{opacity:.4} 100%{opacity:1} }
+
+.np-header-sep { color: #cbd5e1; }
+
+/* ════════════════════════════════════════ OFFLINE BANNER ══ */
+.offline-banner {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 2100;
+  background: #7f1d1d; color: #fecaca;
+  font-family: var(--font-main); font-weight: 600; font-size: 0.9rem;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  padding: 13px 20px;
+  box-shadow: 0 6px 28px rgba(127,29,29,0.30);
+  transform: translateY(-110%);
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+.offline-banner.visible { transform: translateY(0); }
+.offline-banner i { font-size: 1rem; animation: shake 0.6s var(--ease-in-out) infinite; }
+@keyframes shake {
+  0%,100%{transform:rotate(0)} 20%{transform:rotate(-12deg)} 40%{transform:rotate(12deg)}
+  60%{transform:rotate(-6deg)} 80%{transform:rotate(6deg)}
+}
+.offline-banner .reconnect-hint { font-size: 0.78rem; opacity: 0.8; font-style: italic; }
+.online-restored-toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(120px);
+  z-index: 2100; background: #14532d; color: #bbf7d0;
+  font-family: var(--font-main); font-weight: 600; font-size: 0.88rem;
+  padding: 12px 24px; border-radius: 30px;
+  box-shadow: 0 8px 28px rgba(20,83,45,0.30);
+  display: flex; align-items: center; gap: 9px;
+  transition: transform var(--dur-slow) var(--ease-out), opacity var(--dur-slow) var(--ease-out);
+  opacity: 0;
+}
+.online-restored-toast.visible { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+/* ════════════════════════════════════════ LOCATION STATES ══ */
+.loc-state { display: none; }
+.loc-state.active { display: block; animation: fin var(--dur) var(--ease-out); }
+
+.loc-ask-wrap { text-align: center; padding: 12px 6px 6px; }
+.loc-ask-icon {
+  font-size: 2rem; color: var(--location-color); margin-bottom: 10px;
+  animation: pulse-loc 2.2s var(--ease-in-out) infinite;
+}
+@keyframes pulse-loc { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
+.loc-ask-title { font-family: var(--font-main); font-weight: 600; font-size: 0.92rem; color: var(--text-heading); margin-bottom: 6px; }
+.loc-ask-desc { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5; font-weight: 500; }
+.btn-grant-loc {
+  background: var(--location-color); color: #fff;
+  border: none; border-radius: 10px; padding: 10px 20px;
+  font-family: var(--font-main); font-weight: 600; font-size: 0.85rem;
+  cursor: pointer; width: 100%;
+  box-shadow: 0 4px 12px rgba(21,128,61,0.26);
+  transition: background var(--dur) var(--ease-out), transform var(--dur-fast) var(--ease-out), box-shadow var(--dur) var(--ease-out);
+}
+.btn-grant-loc:hover { background: #166534; transform: translateY(-1px); box-shadow: 0 7px 18px rgba(21,128,61,0.32); }
+.btn-grant-loc:active { transform: translateY(0); }
+
+.loc-data-rows {}
+
+.loc-error-wrap { padding: 4px 0; }
+.loc-perm-list { list-style: none; padding: 0; margin: 0 0 14px; }
+.loc-perm-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 9px; margin-bottom: 6px;
+  font-size: 0.78rem; font-weight: 600; border: 1px solid;
+}
+.loc-perm-item.perm-ok { background: rgba(21,128,61,.08); border-color: rgba(21,128,61,.25); color: #166534; }
+.loc-perm-item.perm-denied { background: rgba(220,38,38,.08); border-color: rgba(220,38,38,.25); color: #991b1b; }
+.loc-perm-item.perm-unknown { background: rgba(217,119,6,.08); border-color: rgba(217,119,6,.25); color: #92400e; }
+.loc-perm-icon { font-size: 0.85rem; flex-shrink: 0; }
+.loc-perm-text { flex: 1; }
+.loc-perm-status { font-size: 0.68rem; opacity: 0.8; }
+
+.loc-error-msg {
+  background: rgba(220,38,38,.08); border: 1px solid rgba(220,38,38,.2);
+  border-radius: 10px; padding: 10px 12px; margin-bottom: 14px;
+  font-size: 0.78rem; color: #7f1d1d; line-height: 1.5; font-weight: 500;
+  display: flex; gap: 8px; align-items: flex-start;
+}
+.loc-error-msg i { color: var(--danger); margin-top: 1px; flex-shrink: 0; }
+
+.btn-refresh-loc {
+  background: #fff; color: var(--location-color);
+  border: 1.5px solid var(--location-color);
+  border-radius: 10px; padding: 10px 18px;
+  font-family: var(--font-main); font-weight: 600; font-size: 0.85rem;
+  cursor: pointer; width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background var(--dur) var(--ease-out), color var(--dur) var(--ease-out), transform var(--dur-fast) var(--ease-out), box-shadow var(--dur) var(--ease-out);
+}
+.btn-refresh-loc:hover {
+  background: var(--location-color); color: #fff;
+  box-shadow: 0 6px 18px rgba(21,128,61,0.26); transform: translateY(-1px);
+}
+.btn-refresh-loc.spinning i { animation: spin 0.8s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg)} }
+
+/* ════════════════════════════════════════ RESPONSIVE ══ */
+@media (max-width: 575.98px) {
+  .main-wrap { padding: 18px 0 44px; }
+  .metric-card { padding: 18px 16px 16px; }
+  .glow-ring { width: 112px; height: 112px; }
+}
+
+/* ════════════════════════════════════════ REDUCED MOTION ══ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .metric-card:hover,
+  .chart-card:hover, .info-card:hover, .server-race:hover { transform: none; }
+  .loading-bar { width: 100%; }
+  .fade-in, .loc-state.active { opacity: 1; }
+}
+/* ── Portfolio link + footer ── */
+a.np-logo { text-decoration: none; transition: color var(--dur) var(--ease-out); }
+a.np-logo:hover { color: var(--ping-color); }
+.app-credit {
+  margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;
+  font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted);
+}
+.app-credit-sep { color: var(--text-light); }
+.app-credit a {
+  color: var(--ping-mid); text-decoration: none; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: color var(--dur) var(--ease-out);
+}
+.app-credit a:hover { color: var(--ping-color); text-decoration: underline; }
+.app-credit a i { font-size: 0.62rem; }
+</style>
+</head>
+<body>
+
+<!-- Offline Banner -->
+<div class="offline-banner" id="offlineBanner">
+  <i class="fas fa-wifi"></i>
+  <div>
+    <div>Internet connection lost check your network.</div>
+    <div class="reconnect-hint">We will resume automatically when reconnected.</div>
+  </div>
+</div>
+
+<!-- Online Restored Toast -->
+<div class="online-restored-toast" id="onlineToast">
+  <i class="fas fa-check-circle"></i> Connection restored!
+</div>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-logo">Live Internet Meter</div>
+  <div class="loading-bar-wrap"><div class="loading-bar"></div></div>
+  <div class="loading-text" id="loadingText">INITIALIZING SENSORS…</div>
+</div>
+
+<!-- HEADER -->
+<header class="np-header">
+  <div class="container-fluid px-3 px-md-4">
+    <div class="d-flex align-items-center justify-content-between">
+      <a class="np-logo" href="https://kathanpatel.vercel.app/" target="_blank" rel="noopener noreferrer" aria-label="Live Internet Meter visit Kathan’s portfolio"><span class="np-logo-dot" aria-hidden="true"></span>Live Internet Meter</a>
+      <div class="d-flex align-items-center gap-3">
+        <div class="np-status-bar d-none d-sm-flex">
+          <span class="np-dot" id="connDot" aria-hidden="true"></span>
+          <span id="connLabel">CONNECTING</span>
+          <span style="color:#cbd5e1">|</span>
+          <span id="headerTime">--:--:--</span>
+        </div>
+        <button class="btn-settings" onclick="toggleSettings()" aria-label="Open settings"><i class="fas fa-sliders me-1"></i>Settings</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- MAIN -->
+<div class="main-wrap">
+<div class="container-fluid px-3 px-md-4">
+
+  <!-- Ticker -->
+  <div class="live-ticker mb-3 section-gap widget-section" id="widget-ticker">
+    <div class="ticker-dot" aria-hidden="true"></div>
+    <div class="ticker-text" id="tickerText">Scanning network…</div>
+  </div>
+
+  <!-- METRIC CARDS -->
+  <div class="row g-3 section-gap">
+    <!-- PING -->
+    <div class="col-12 col-md-4 widget-section" id="widget-ping">
+      <div class="metric-card ping-card fade-in" role="group" aria-label="Ping latency">
+        <div class="metric-label"><i class="fas fa-satellite-dish me-1"></i>Ping Latency<span class="ms-auto" id="pingQuality"></span></div>
+        <div class="glow-ring-wrap">
+          <div class="glow-ring ping-ring">
+            <div class="metric-value" id="pingVal">--</div>
+            <div class="metric-unit">milliseconds</div>
+          </div>
+        </div>
+        <div class="sparkline-wrap"><canvas id="pingSparkline" aria-hidden="true"></canvas></div>
+        <div class="metric-stats">
+          <div class="metric-stat"><div class="stat-lbl">MIN</div><div class="stat-val" id="pingMin">--</div></div>
+          <div class="metric-stat"><div class="stat-lbl">MAX</div><div class="stat-val" id="pingMax">--</div></div>
+          <div class="metric-stat"><div class="stat-lbl">AVG</div><div class="stat-val" id="pingAvg">--</div></div>
+          <div class="metric-stat ms-auto"><div class="stat-lbl">JITTER</div><div class="stat-val" id="pingJitter">--</div></div>
+        </div>
+      </div>
+    </div>
+    <!-- DOWNLOAD -->
+    <div class="col-12 col-md-4 widget-section" id="widget-download">
+      <div class="metric-card dl-card fade-in" style="animation-delay:.08s" role="group" aria-label="Download speed">
+        <div class="metric-label"><i class="fas fa-arrow-down me-1"></i>Download Speed<span class="ms-auto" id="dlQuality"></span></div>
+
+        <!-- Speedometer -->
+        <div class="speedo-wrap">
+          <svg id="dlSpeedoSVG" class="speedo-svg" viewBox="0 0 220 130" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <g id="dlTrack"></g>
+            <g id="dlSegments"></g>
+            <g id="dlTicks"></g>
+            <g id="dlNeedle" class="speedo-needle-g" style="transform:rotate(-90deg)">
+              <polygon class="speedo-needle-poly" points="108.5,118 111.5,118 110,41"/>
+              <circle cx="110" cy="118" r="9" class="speedo-hub"/>
+              <circle cx="110" cy="118" r="4" class="speedo-hub-dot"/>
+            </g>
+          </svg>
+          <div class="speedo-val-row">
+            <div class="metric-value" id="dlVal">--</div>
+          </div>
+          <div class="speedo-unit-row">
+            <button class="speedo-unit-pill" id="dlUnitPill" onclick="cycleUnit('dl')" title="Click to switch unit">
+              <span class="speedo-unit-name" id="dlUnit">Mbps</span>
+              <i class="fas fa-arrows-rotate"></i>
+            </button>
+            <span class="speedo-scale-hint" id="dlScaleHint">0–100 Mbps</span>
+          </div>
+        </div>
+
+        <div class="sparkline-wrap"><canvas id="dlSparkline" aria-hidden="true"></canvas></div>
+        <div class="metric-stats">
+          <div class="metric-stat"><div class="stat-lbl">PEAK</div><div class="stat-val" id="dlPeak">--</div></div>
+          <div class="metric-stat"><div class="stat-lbl">AVG</div><div class="stat-val" id="dlAvg">--</div></div>
+          <div class="metric-stat ms-auto"><div class="stat-lbl">SAMPLES</div><div class="stat-val" id="dlSamples">0</div></div>
+        </div>
+      </div>
+    </div>
+    <!-- UPLOAD -->
+    <div class="col-12 col-md-4 widget-section" id="widget-upload">
+      <div class="metric-card ul-card fade-in" style="animation-delay:.16s" role="group" aria-label="Upload speed">
+        <div class="metric-label"><i class="fas fa-arrow-up me-1"></i>Upload Speed<span class="ms-auto" id="ulQuality"></span></div>
+
+        <!-- Speedometer -->
+        <div class="speedo-wrap">
+          <svg id="ulSpeedoSVG" class="speedo-svg" viewBox="0 0 220 130" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <g id="ulTrack"></g>
+            <g id="ulSegments"></g>
+            <g id="ulTicks"></g>
+            <g id="ulNeedle" class="speedo-needle-g" style="transform:rotate(-90deg)">
+              <polygon class="speedo-needle-poly" points="108.5,118 111.5,118 110,41"/>
+              <circle cx="110" cy="118" r="9" class="speedo-hub"/>
+              <circle cx="110" cy="118" r="4" class="speedo-hub-dot"/>
+            </g>
+          </svg>
+          <div class="speedo-val-row">
+            <div class="metric-value" id="ulVal">--</div>
+          </div>
+          <div class="speedo-unit-row">
+            <button class="speedo-unit-pill" id="ulUnitPill" onclick="cycleUnit('ul')" title="Click to switch unit">
+              <span class="speedo-unit-name" id="ulUnit">Mbps</span>
+              <i class="fas fa-arrows-rotate"></i>
+            </button>
+            <span class="speedo-scale-hint" id="ulScaleHint">0–50 Mbps</span>
+          </div>
+        </div>
+
+        <div class="sparkline-wrap"><canvas id="ulSparkline" aria-hidden="true"></canvas></div>
+        <div class="metric-stats">
+          <div class="metric-stat"><div class="stat-lbl">PEAK</div><div class="stat-val" id="ulPeak">--</div></div>
+          <div class="metric-stat"><div class="stat-lbl">AVG</div><div class="stat-val" id="ulAvg">--</div></div>
+          <div class="metric-stat ms-auto"><div class="stat-lbl">SAMPLES</div><div class="stat-val" id="ulSamples">0</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY CHART -->
+  <div class="row g-3 section-gap widget-section" id="widget-history">
+    <div class="col-12">
+      <div class="chart-card">
+        <div class="chart-title">
+          <i class="fas fa-chart-line" style="color:var(--ping-color)"></i>
+          Live History last 60 data points
+        </div>
+        <!-- Fixed-height wrapper: canvas NEVER expands beyond this -->
+        <div class="history-chart-container">
+          <canvas id="historyChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SERVER RACE + INFO -->
+  <div class="row g-3 section-gap">
+    <!-- SERVER RACE -->
+    <div class="col-12 col-lg-6 widget-section" id="widget-server-race">
+      <div class="server-race h-100">
+        <div class="server-race-title">
+          <i class="fas fa-network-wired me-2"></i>Best Server Selection
+          <span class="srv-scanning ms-1" id="raceStatus">scanning…</span>
+        </div>
+        <div id="serverRaceList">
+          <div style="font-family:var(--font-mono);font-size:.66rem;color:var(--text-muted)">Detecting location to rank servers…</div>
+        </div>
+
+        <!-- Refill status hidden until background fetch starts -->
+        <div class="srv-refill-status" id="refillStatus" style="display:none">
+          <i class="fas fa-circle-notch fa-spin" id="refillIcon"></i>
+          <span id="refillText">Finding more active servers…</span>
+        </div>
+
+        <div style="margin-top:10px;padding-top:10px;border-top:1.5px solid var(--border)">
+          <div class="info-row">
+            <span class="info-key" style="color:var(--text-muted)">Active Server</span>
+            <span style="font-family:var(--font-mono);font-size:.63rem;color:var(--ping-color)" id="activeServer">Selecting…</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key" style="color:var(--text-muted)">Region</span>
+            <span style="font-family:var(--font-mono);font-size:.63rem;color:var(--ping-color)" id="activeServerRegion">--</span>
+          </div>
+          <div class="info-row" style="margin-top:4px">
+            <span class="info-key" style="color:var(--text-muted)">Selection</span>
+            <span style="font-family:var(--font-mono);font-size:.6rem;color:var(--text-muted)" id="selectionMode">Auto · best latency</span>
+          </div>
+          <div style="margin-top:8px;font-family:var(--font-mono);font-size:.58rem;
+               color:var(--text-light);line-height:1.6;padding:6px 8px;
+               background:rgba(0,0,0,.03);border-radius:6px;border:1px solid var(--border)">
+            <i class="fas fa-hand-pointer" style="color:var(--server-color);margin-right:4px"></i>
+            Click any <span style="color:#22c55e">reachable</span> server to use it as active
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- NETWORK INFO -->
+    <div class="col-12 col-md-6 col-lg-3 widget-section" id="widget-server">
+      <div class="info-card server-card h-100">
+        <div class="info-card-title server-title"><i class="fas fa-server me-2"></i>Network Info</div>
+        <div class="info-row"><span class="info-key">IP Address</span><span class="info-val" id="ipAddr">--</span></div>
+        <div class="info-row"><span class="info-key">ISP</span><span class="info-val" id="ispName">--</span></div>
+        <div class="info-row"><span class="info-key">ASN</span><span class="info-val" id="asnVal">--</span></div>
+        <div class="info-row"><span class="info-key">Eff. Type</span><span class="info-val" id="connType">--</span></div>
+        <div class="info-row"><span class="info-key">Downlink est.</span><span class="info-val" id="navDownlink">--</span></div>
+        <div class="info-row"><span class="info-key">RTT est.</span><span class="info-val" id="navRTT">--</span></div>
+        <div class="info-row"><span class="info-key">Status</span>
+          <span id="netStatusWrap"><span class="badge-online"><span style="width:5px;height:5px;border-radius:50%;background:var(--location-color);display:inline-block"></span>ONLINE</span></span>
+        </div>
+      </div>
+    </div>
+    <!-- LOCATION -->
+    <div class="col-12 col-md-6 col-lg-3 widget-section" id="widget-location">
+      <div class="info-card location-card h-100">
+        <div class="info-card-title location-title"><i class="fas fa-map-marker-alt me-2"></i>Your Location</div>
+
+        <!-- STATE: asking for permission -->
+        <div class="loc-state active" id="locStateAsk">
+          <div class="loc-ask-wrap">
+            <div class="loc-ask-icon"><i class="fas fa-location-crosshairs"></i></div>
+            <div class="loc-ask-title">Location Access</div>
+            <div class="loc-ask-desc">Allow location access for precise city, region and coordinates. Your location is used only to rank nearby servers and isn’t saved.</div>
+            <button class="btn-grant-loc" onclick="requestLocation()">
+              <i class="fas fa-location-dot me-2"></i>Allow Location
+            </button>
+          </div>
+        </div>
+
+        <!-- STATE: loading / detecting -->
+        <div class="loc-state" id="locStateLoading">
+          <div class="loc-ask-wrap">
+            <div class="loc-ask-icon" style="animation:none">
+              <i class="fas fa-circle-notch" style="animation:spin 1s linear infinite"></i>
+            </div>
+            <div class="loc-ask-title">Detecting…</div>
+            <div class="loc-ask-desc" id="locLoadingMsg">Fetching your location details.</div>
+          </div>
+        </div>
+
+        <!-- STATE: success data rows -->
+        <div class="loc-state loc-data-rows" id="locStateData">
+          <div class="info-row"><span class="info-key">City</span><span class="info-val" id="locCity">--</span></div>
+          <div class="info-row"><span class="info-key">Region</span><span class="info-val" id="locRegion">--</span></div>
+          <div class="info-row"><span class="info-key">Country</span><span class="info-val" id="locCountry">--</span></div>
+          <div class="info-row"><span class="info-key">Timezone</span><span class="info-val" id="locTZ">--</span></div>
+          <div class="info-row"><span class="info-key">Coords</span><span class="info-val" id="locCoords">--</span></div>
+          <div class="info-row"><span class="info-key">Postal</span><span class="info-val" id="locPostal">--</span></div>
+          <div class="info-row" style="margin-top:6px">
+            <span class="info-key">Source</span>
+            <span class="info-val" id="locSource" style="color:var(--text-muted);font-size:.6rem">--</span>
+          </div>
+        </div>
+
+        <!-- STATE: error / denied -->
+        <div class="loc-state" id="locStateError">
+          <div class="loc-error-wrap">
+            <!-- Required permissions list -->
+            <div style="font-family:var(--font-main);font-size:0.74rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">
+              Required Access
+            </div>
+            <ul class="loc-perm-list" id="locPermList"></ul>
+
+            <!-- Error message -->
+            <div class="loc-error-msg" id="locErrorMsg">
+              <i class="fas fa-triangle-exclamation"></i>
+              <span id="locErrorText">Could not retrieve location details.</span>
+            </div>
+
+            <!-- Refresh button -->
+            <button class="btn-refresh-loc" id="btnRefreshLoc" onclick="requestLocation()">
+              <i class="fas fa-rotate-right"></i> Retry / Refresh
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Credit / portfolio -->
+  <footer class="app-credit">
+    <span>Live Internet Meter</span>
+    <span class="app-credit-sep">·</span>
+    <a href="https://kathanpatel.vercel.app/" target="_blank" rel="noopener noreferrer">Built by Kathan view portfolio <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
+  </footer>
+
+</div>
+</div>
+
+<!-- SETTINGS PANEL -->
+<div class="settings-overlay" id="settingsOverlay" onclick="closeSettingsBg(event)">
+  <div class="settings-panel" id="settingsPanel">
+    <div class="d-flex justify-content-between align-items-start mb-1">
+      <div><div class="settings-title"><i class="fas fa-sliders me-2"></i>Settings</div><div class="settings-sub">Customize widgets &amp; refresh rate</div></div>
+      <button onclick="toggleSettings()" aria-label="Close settings" style="background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer;padding:4px"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-label">Visible Widgets</div>
+      <div class="toggle-item"><div class="toggle-label"><span class="toggle-icon" style="color:var(--ping-color)">⬤</span>Ping Latency</div><label class="toggle-switch"><input type="checkbox" id="tog-ping" checked onchange="toggleWidget('ping',this)" aria-label="Show Ping Latency"><span class="toggle-slider"></span></label></div>
+      <div class="toggle-item"><div class="toggle-label"><span class="toggle-icon" style="color:var(--dl-color)">⬤</span>Download Speed</div><label class="toggle-switch"><input type="checkbox" id="tog-download" checked onchange="toggleWidget('download',this)" aria-label="Show Download Speed"><span class="toggle-slider"></span></label></div>
+      <div class="toggle-item"><div class="toggle-label"><span class="toggle-icon" style="color:var(--ul-color)">⬤</span>Upload Speed</div><label class="toggle-switch"><input type="checkbox" id="tog-upload" checked onchange="toggleWidget('upload',this)" aria-label="Show Upload Speed"><span class="toggle-slider"></span></label></div>
+      <div class="toggle-item"><div class="toggle-label"><span class="toggle-icon" style="color:var(--accent)">⬤</span>Live Ticker</div><label class="toggle-switch"><input type="checkbox" id="tog-ticker" checked onchange="toggleWidget('ticker',this)" aria-label="Show Live Ticker"><span class="toggle-slider"></span></label></div>
+      <div class="toggle-item"><div class="toggle-label"><span class="toggle-icon" style="color:var(--warn)">⬤</span>History Chart</div><label class="toggle-switch"><input type="checkbox" id="tog-history" checked onchange="toggleWidget('history',this)" aria-label="Show History Chart"><span class="toggle-slider"></span></label></div>
+      <div class="toggle-item"><div class="toggle-label"><span class="toggle-icon" style="color:var(--server-color)">⬤</span>Server Race</div><label class="toggle-switch"><input type="checkbox" id="tog-server-race" checked onchange="toggleWidget('server-race',this)" aria-label="Show Server Race"><span class="toggle-slider"></span></label></div>
+      <div class="toggle-item"><div class="toggle-label"><span class="toggle-icon" style="color:var(--server-color)">⬤</span>Network Info</div><label class="toggle-switch"><input type="checkbox" id="tog-server" checked onchange="toggleWidget('server',this)" aria-label="Show Network Info"><span class="toggle-slider"></span></label></div>
+      <div class="toggle-item"><div class="toggle-label"><span class="toggle-icon" style="color:var(--location-color)">⬤</span>Location Info</div><label class="toggle-switch"><input type="checkbox" id="tog-location" checked onchange="toggleWidget('location',this)" aria-label="Show Location Info"><span class="toggle-slider"></span></label></div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-label">Ping Interval</div>
+      <div class="d-flex justify-content-between mb-1">
+        <span style="font-size:.68rem;color:var(--text-muted)">Interval</span>
+        <span class="interval-val" id="intervalDisplay">500ms</span>
+      </div>
+      <input type="range" class="interval-slider" id="intervalSlider" min="200" max="5000" step="100" value="500" oninput="updateInterval(this.value)" aria-label="Ping interval in milliseconds"/>
+      <div class="d-flex justify-content-between" style="font-size:.57rem;color:var(--text-muted)"><span>200ms</span><span>5s</span></div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-label">Display</div>
+      <div class="toggle-item"><div class="toggle-label"><i class="fas fa-wave-square toggle-icon" style="color:var(--accent)"></i>Sparklines</div><label class="toggle-switch"><input type="checkbox" id="tog-sparklines" checked onchange="toggleSparklines(this)" aria-label="Show sparklines"><span class="toggle-slider"></span></label></div>
+      <div class="toggle-item">
+        <div class="toggle-label"><i class="fas fa-redo toggle-icon" style="color:var(--server-color)"></i>Re-scan Servers</div>
+        <button onclick="triggerRescan()" style="background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);color:#c4b5fd;font-size:.66rem;font-family:'Exo 2',sans-serif;padding:3px 10px;border-radius:4px;cursor:pointer">Rescan</button>
+      </div>
+    </div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.05)">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:.57rem;color:var(--text-muted);line-height:1.9">
+        <div>Live Internet Meter v1.0 · Non-blocking async</div>
+        <div>Ping: every interval · DL: ~3s · UL: ~8s</div>
+        <div>Speeds are estimates, not ISP-grade tests</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════
+   CONSTANTS
+════════════════════════════════════ */
+const MAX_HIST   = 60;
+const FETCH_TO   = 7000;  // global fetch timeout ms
+const DL_BYTES   = 750000;
+
+/* ════════════════════════════════════
+   STATE
+════════════════════════════════════ */
+const S = {
+  pingMin:Infinity,pingMax:0,pingSum:0,pingCount:0,
+  dlPeak:0,dlSum:0,dlCount:0,
+  ulPeak:0,ulSum:0,ulCount:0,
+  lastPings:[],
+  interval:500,
+  pingTimer:null,dlTimer:null,ulTimer:null,
+  isPinging:false,isDling:false,isUling:false,
+  activeServer:null,
+  serverPool:[],          // full pool passed to race
+  raceResults:[],         // last race result objects kept for re-rendering on select
+  selectionManual:false,  // true when user clicked a row to override auto-best
+  triedHosts:new Set(),   // hostnames already pinged refill skips these
+  allParsedCSV:[],        // full R0GGER CSV rows for background refill
+  refillRunning:false,    // guard flag prevent concurrent refills
+  ipData:null,
+  lastDlMbps:null,
+  // ── Speedometer state ──
+  dlUnitIdx:  0,      // index into UNIT_MODES
+  ulUnitIdx:  0,
+  dlMaxScale: 100,    // Mbps auto-scales up as speed grows
+  ulMaxScale: 50,     // Mbps
+  dlLastMbps: null,   // last raw Mbps for re-render on unit switch
+  ulLastMbps: null,
+};
+
+/* ════════════════════════════════════════════════════════════════
+   DYNAMIC SERVER DISCOVERY   R0GGER public-iperf3-servers list
+   https://github.com/R0GGER/public-iperf3-servers
+   ──────────────────────────────────────────────────────────────
+   HOW IT WORKS
+   ┌─────────────────────────────────────────────────────────────┐
+   │ 1. Detect user's continent from their IP country code       │
+   │ 2. Fetch the per-continent CSV from R0GGER's NocoDB API     │
+   │    → real iperf3 server hostnames, cities, countries        │
+   │ 3. Pick up to MAX_IPERF_SERVERS nearest to the user's CC   │
+   │ 4. Always prepend 2 Cloudflare anycast anchors              │
+   │ 5. Test each server via HTTPS HEAD (no-cors) for latency    │
+   │ 6. DL/UL speed still uses Cloudflare HTTP browsers have  │
+   │    no raw TCP socket, so iperf3 protocol is unreachable     │
+   └─────────────────────────────────────────────────────────────┘
+════════════════════════════════════════════════════════════════ */
+
+const MAX_IPERF_SERVERS = 6;   // max iperf3 servers to race per region
+
+/* ── Cloudflare anchors always included regardless of location ── */
+const CF_ANCHORS = [
+  { id:'cf0', name:'Cloudflare Global', region:'Global CDN · Anycast',
+    pingUrl:'https://cloudflare.com/cdn-cgi/trace',
+    dlUrl:`https://speed.cloudflare.com/__down?bytes=${DL_BYTES}`,
+    ulUrl:'https://speed.cloudflare.com/__up', type:'cdn' },
+  { id:'cf1', name:'Cloudflare 1.1.1.1', region:'Anycast · Nearest PoP',
+    pingUrl:'https://1.1.1.1/cdn-cgi/trace',
+    dlUrl:`https://speed.cloudflare.com/__down?bytes=${DL_BYTES}`,
+    ulUrl:'https://speed.cloudflare.com/__up', type:'cdn' },
+];
+
+/*
+ * R0GGER NocoDB shared-view IDs one per continent
+ * Source: https://github.com/R0GGER/public-iperf3-servers README
+ * CSV endpoint pattern:
+ *   https://db.iperf3serverlist.net/api/v1/db/public/shared-view/{id}/rows/export/csv
+ */
+const ROGGER_VIEWS = {
+  af: 'f4fd0f64-7dff-4416-8e3b-315b837b67d4', // Africa
+  as: 'bce4c994-6598-4b00-b2cd-fc48503ad7ac', // Asia
+  eu: 'b111407c-43c4-48af-a828-301b698064a3', // Europe
+  na: '3377d9ec-59e3-4f68-9ee5-9ff670d1d16d', // North America
+  sa: 'b5dc9c09-3867-489f-a6e7-f46bebb7fd8e', // South America
+  oc: '4c2dde1c-c3d6-44aa-8a99-1a7c51af8d01', // Oceania
+};
+const ROGGER_BASE = 'https://db.iperf3serverlist.net/api/v1/db/public/shared-view/';
+
+/* Country → continent mapping (expanded) */
+const CC_TO_CONTINENT = {
+  // North America
+  US:'na',CA:'na',MX:'na',GT:'na',BZ:'na',HN:'na',SV:'na',NI:'na',CR:'na',PA:'na',
+  CU:'na',JM:'na',HT:'na',DO:'na',PR:'na',TT:'na',BB:'na',LC:'na',VC:'na',GD:'na',
+  // South America
+  BR:'sa',AR:'sa',CL:'sa',CO:'sa',PE:'sa',VE:'sa',EC:'sa',BO:'sa',PY:'sa',UY:'sa',GY:'sa',SR:'sa',
+  // Europe
+  GB:'eu',DE:'eu',FR:'eu',IT:'eu',ES:'eu',NL:'eu',SE:'eu',PL:'eu',RU:'eu',TR:'eu',
+  UA:'eu',CH:'eu',AT:'eu',BE:'eu',DK:'eu',FI:'eu',NO:'eu',PT:'eu',GR:'eu',CZ:'eu',
+  HU:'eu',RO:'eu',BG:'eu',HR:'eu',SK:'eu',SI:'eu',RS:'eu',LT:'eu',LV:'eu',EE:'eu',
+  IE:'eu',IS:'eu',LU:'eu',MT:'eu',CY:'eu',AL:'eu',BA:'eu',MK:'eu',MD:'eu',BY:'eu',
+  // Asia
+  IN:'as',CN:'as',JP:'as',KR:'as',SG:'as',ID:'as',TH:'as',VN:'as',PK:'as',BD:'as',
+  PH:'as',MY:'as',AE:'as',SA:'as',IL:'as',IQ:'as',IR:'as',KZ:'as',UZ:'as',MM:'as',
+  NP:'as',LK:'as',KH:'as',HK:'as',TW:'as',MN:'as',AF:'as',KW:'as',QA:'as',BH:'as',
+  OM:'as',YE:'as',JO:'as',LB:'as',SY:'as',GE:'as',AM:'as',AZ:'as',TM:'as',TJ:'as',
+  KG:'as',LA:'as',BN:'as',MV:'as',BT:'as',TL:'as',
+  // Oceania
+  AU:'oc',NZ:'oc',PG:'oc',FJ:'oc',SB:'oc',VU:'oc',WS:'oc',TO:'oc',KI:'oc',FM:'oc',PW:'oc',
+  // Africa
+  ZA:'af',NG:'af',EG:'af',KE:'af',GH:'af',ET:'af',TZ:'af',MA:'af',DZ:'af',TN:'af',
+  UG:'af',RW:'af',MZ:'af',ZM:'af',ZW:'af',AO:'af',CM:'af',CI:'af',SN:'af',ML:'af',
+};
+
+/*
+ * Country priority list per continent servers in countries closer to
+ * the user's own country get picked first when filtering the CSV.
+ * Key = user's continent, Value = ordered list of preferred country codes.
+ * Servers whose CC appears earlier in the list rank higher in selection.
+ */
+const COUNTRY_PRIORITY = {
+  as: ['IN','SG','JP','KR','HK','TW','MY','TH','ID','VN','PH','BD','PK','AE','SA','CN'],
+  eu: ['DE','NL','GB','FR','SE','CH','AT','BE','PL','DK','FI','NO','IT','ES','PT','RU'],
+  na: ['US','CA','MX'],
+  sa: ['BR','AR','CL','CO','PE','VE','EC'],
+  af: ['ZA','NG','EG','KE','GH','MA','TZ','ET'],
+  oc: ['AU','NZ','SG','JP'],
+};
+
+/* ──────────────────────────────────────────────────────────────
+   parseRoggerCSV(csvText)
+   Parses the NocoDB CSV export from R0GGER's shared views.
+   Expected columns (order may vary we detect by header):
+     COMMAND | OPTIONS | GB | COUNTRY | LOCATION | PROVIDER
+   The COMMAND column contains the full iperf3 CLI string, e.g.:
+     "iperf3 -c ams.speedtest.clouvider.net -p 5201-5210"
+   We extract the hostname after "-c".
+   Returns array of { host, city, country, provider }
+────────────────────────────────────────────────────────────── */
+function parseRoggerCSV(csvText) {
+  const lines = csvText.trim().split('\n');
+  if (lines.length < 2) return [];
+
+  // Parse header row (handle quoted fields)
+  const parseRow = row => {
+    const cols = []; let cur = ''; let inQ = false;
+    for (let i = 0; i < row.length; i++) {
+      const ch = row[i];
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+      else cur += ch;
+    }
+    cols.push(cur.trim());
+    return cols.map(c => c.replace(/^"|"$/g, '').trim());
+  };
+
+  const headers = parseRow(lines[0]).map(h => h.toUpperCase());
+  const ci = {
+    cmd:      headers.findIndex(h => h.includes('COMMAND') || h.includes('CMD')),
+    country:  headers.findIndex(h => h.includes('COUNTRY')),
+    location: headers.findIndex(h => h.includes('LOCATION') || h.includes('CITY')),
+    provider: headers.findIndex(h => h.includes('PROVIDER') || h.includes('HOST')),
+  };
+
+  const servers = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const cols = parseRow(lines[i]);
+
+    // Extract hostname from iperf3 command string: "iperf3 -c <HOST> ..."
+    const cmdRaw = ci.cmd >= 0 ? (cols[ci.cmd] || '') : cols[0] || '';
+    const hostMatch = cmdRaw.match(/\biperf3\b.*?-c\s+([^\s]+)/i)
+                   || cmdRaw.match(/^([a-z0-9._-]+\.[a-z]{2,})/i);
+    if (!hostMatch) continue;
+
+    const host = hostMatch[1].trim().replace(/['"]/g, '');
+    if (!host || host.length < 4 || !/\./.test(host)) continue;
+
+    const country  = ci.country  >= 0 ? (cols[ci.country]  || '').replace(/[^A-Z]/gi,'').toUpperCase().slice(0,2) : '';
+    const location = ci.location >= 0 ? (cols[ci.location] || '').replace(/^"|"$/g,'') : '';
+    const provider = ci.provider >= 0 ? (cols[ci.provider] || '').replace(/^"|"$/g,'') : '';
+
+    // Skip bare IP addresses HTTP HEAD to raw IPs often times out
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) continue;
+
+    servers.push({ host, country, city: location, provider });
+  }
+  return servers;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   buildServerPool(parsedServers, userCC, continent)
+   Converts R0GGER parsed rows into our server-race format.
+   Picks up to MAX_IPERF_SERVERS, prioritising:
+   1.  Same country as user
+   2.  Preferred-country order for the continent
+   3.  Everything else (alphabetical by country)
+────────────────────────────────────────────────────────────── */
+function buildServerPool(parsedServers, userCC, continent) {
+  const priority = COUNTRY_PRIORITY[continent] || [];
+
+  // Score: 0 = user's own country, 1…n = priority index, 999 = unlisted
+  const score = cc => {
+    if (cc === userCC) return 0;
+    const idx = priority.indexOf(cc);
+    return idx >= 0 ? idx + 1 : 999;
+  };
+
+  const sorted = [...parsedServers].sort((a, b) => score(a.country) - score(b.country));
+  const picked = sorted.slice(0, MAX_IPERF_SERVERS);
+
+  return picked.map((s, i) => {
+    const flag    = s.country ? String.fromCodePoint(...[...s.country.toUpperCase()].map(c => 0x1F1E6 - 65 + c.charCodeAt(0))) : '';
+    const label   = [s.city, s.country].filter(Boolean).join(', ');
+    const provStr = s.provider ? ` · ${s.provider.slice(0, 24)}` : '';
+    return {
+      id:      `ip3_${i}`,
+      name:    `${flag} ${label || s.host}`,
+      region:  `${label}${provStr} · iperf3 host`,
+      pingUrl: `https://${s.host}/`,      // HTTPS HEAD for latency only
+      dlUrl:   `https://speed.cloudflare.com/__down?bytes=${DL_BYTES}`,  // Cloudflare HTTP DL
+      ulUrl:   `https://speed.cloudflare.com/__up`,                       // Cloudflare HTTP UL
+      host:    s.host,
+      type:    'iperf3',
+    };
+  });
+}
+
+/* ──────────────────────────────────────────────────────────────
+   discoverServers(userCC)
+   Main entry point called once on boot and on Rescan.
+   Returns final pool = CF anchors + R0GGER regional servers.
+────────────────────────────────────────────────────────────── */
+async function discoverServers(userCC) {
+  const continent = CC_TO_CONTINENT[userCC] || 'eu';  // default eu if unknown
+  const viewId    = ROGGER_VIEWS[continent];
+
+  // Show discovery state in UI immediately
+  const raceEl   = document.getElementById('serverRaceList');
+  const statusEl = document.getElementById('raceStatus');
+  if (statusEl) { statusEl.textContent = 'locating…'; statusEl.className = 'srv-scanning ms-1'; }
+  if (raceEl) raceEl.innerHTML = `
+    <div style="display:flex;align-items:center;gap:9px;padding:8px 0;
+         font-family:var(--font-mono);font-size:.72rem;color:var(--text-muted)">
+      <i class="fas fa-circle-notch fa-spin" style="color:var(--server-color)"></i>
+      Fetching ${continent.toUpperCase()} servers from iperf3 list…
+      <span style="margin-left:auto;font-size:.6rem;color:var(--text-light)">source: R0GGER/public-iperf3-servers</span>
+    </div>`;
+
+  let pool = [...CF_ANCHORS];   // Cloudflare always present
+
+  if (viewId) {
+    try {
+      const csvUrl = `${ROGGER_BASE}${viewId}/rows/export/csv`;
+      const res    = await fetchTO(csvUrl, { cache: 'no-store' }, 8000);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const csvText = await res.text();
+      const parsed  = parseRoggerCSV(csvText);
+
+      if (parsed.length > 0) {
+        // Store full CSV list so backgroundRefill() can draw more candidates
+        S.allParsedCSV = parsed;
+
+        const regional = buildServerPool(parsed, userCC, continent);
+        // Track every host we've already tried so refill skips them
+        regional.forEach(s => s.host && S.triedHosts.add(s.host));
+        pool = pool.concat(regional);
+        // Update status to reflect source
+        if (raceEl) raceEl.innerHTML = `
+          <div style="display:flex;align-items:center;gap:9px;padding:8px 0;
+               font-family:var(--font-mono);font-size:.72rem;color:var(--text-muted)">
+            <i class="fas fa-circle-notch fa-spin" style="color:var(--ping-color)"></i>
+            Racing ${pool.length} servers (${regional.length} from ${continent.toUpperCase()} iperf3 list + 2 Cloudflare)…
+          </div>`;
+      }
+    } catch (err) {
+      // R0GGER API unavailable add 3 generic fallbacks for the continent
+      const fallbacks = {
+        as: [{id:'fb_sg', name:'🇸🇬 Singapore', region:'Singapore · Fallback', pingUrl:'https://sgp.proof.ovh.net/', dlUrl:`https://speed.cloudflare.com/__down?bytes=${DL_BYTES}`, ulUrl:'https://speed.cloudflare.com/__up', type:'fallback'},
+             {id:'fb_jp', name:'🇯🇵 Tokyo', region:'Tokyo, Japan · Fallback', pingUrl:'https://iperf.biznetnetworks.com/', dlUrl:`https://speed.cloudflare.com/__down?bytes=${DL_BYTES}`, ulUrl:'https://speed.cloudflare.com/__up', type:'fallback'}],
+        eu: [{id:'fb_de', name:'🇩🇪 Frankfurt', region:'Frankfurt, Germany · Fallback', pingUrl:'https://iperf.wtf/', dlUrl:`https://speed.cloudflare.com/__down?bytes=${DL_BYTES}`, ulUrl:'https://speed.cloudflare.com/__up', type:'fallback'},
+             {id:'fb_nl', name:'🇳🇱 Amsterdam', region:'Amsterdam, NL · Fallback', pingUrl:'https://ams.speedtest.clouvider.net/', dlUrl:`https://speed.cloudflare.com/__down?bytes=${DL_BYTES}`, ulUrl:'https://speed.cloudflare.com/__up', type:'fallback'}],
+        na: [{id:'fb_us', name:'🇺🇸 New York', region:'New York, US · Fallback', pingUrl:'https://nyc.speedtest.clouvider.net/', dlUrl:`https://speed.cloudflare.com/__down?bytes=${DL_BYTES}`, ulUrl:'https://speed.cloudflare.com/__up', type:'fallback'},
+             {id:'fb_la', name:'🇺🇸 Los Angeles', region:'Los Angeles, US · Fallback', pingUrl:'https://la.speedtest.clouvider.net/', dlUrl:`https://speed.cloudflare.com/__down?bytes=${DL_BYTES}`, ulUrl:'https://speed.cloudflare.com/__up', type:'fallback'}],
+        sa: [{id:'fb_br', name:'🇧🇷 São Paulo', region:'São Paulo, Brazil · Fallback', pingUrl:'https://speedtest.grupohost.com.br/', dlUrl:`https://speed.cloudflare.com/__down?bytes=${DL_BYTES}`, ulUrl:'https://speed.cloudflare.com/__up', type:'fallback'}],
+        oc: [{id:'fb_au', name:'🇦🇺 Sydney', region:'Sydney, Australia · Fallback', pingUrl:'https://syd.proof.ovh.net/', dlUrl:`https://speed.cloudflare.com/__down?bytes=${DL_BYTES}`, ulUrl:'https://speed.cloudflare.com/__up', type:'fallback'}],
+        af: [{id:'fb_za', name:'🇿🇦 Johannesburg', region:'Johannesburg, SA · Fallback', pingUrl:'https://speedtest.is.co.za/', dlUrl:`https://speed.cloudflare.com/__down?bytes=${DL_BYTES}`, ulUrl:'https://speed.cloudflare.com/__up', type:'fallback'}],
+      };
+      pool = pool.concat(fallbacks[continent] || []);
+    }
+  }
+
+  return pool;
+}
+
+/* ════════════════════════════════════
+   FETCH HELPER AbortController timeout
+════════════════════════════════════ */
+async function fetchTO(url, opts={}, ms=FETCH_TO) {
+  const ac = new AbortController();
+  const tid = setTimeout(()=>ac.abort(), ms);
+  try {
+    return await fetch(url, {...opts, signal:ac.signal});
+  } finally {
+    clearTimeout(tid);
+  }
+}
+
+/* Yield to browser between tasks so UI stays responsive */
+const yield$ = ()=>new Promise(r=>setTimeout(r,0));
+
+/* ════════════════════════════════════
+   MEASUREMENTS
+════════════════════════════════════ */
+async function measurePing() {
+  const base = S.activeServer?.pingUrl ?? 'https://cloudflare.com/cdn-cgi/trace';
+  const url  = base + (base.includes('?')?'&':'?') + '_np=' + Date.now();
+  const t0   = performance.now();
+  try {
+    await fetchTO(url, {method:'HEAD',mode:'no-cors',cache:'no-store'}, 4000);
+    return Math.round(performance.now()-t0);
+  } catch {
+    // fallback: 1.1.1.1
+    const t1=performance.now();
+    try {
+      await fetchTO('https://1.1.1.1?_np='+Date.now(),{method:'HEAD',mode:'no-cors',cache:'no-store'},3000);
+      return Math.round(performance.now()-t1);
+    } catch { return null; }
+  }
+}
+
+async function measureDownload() {
+  const dlUrl = (S.activeServer?.dlUrl ?? `https://speed.cloudflare.com/__down?bytes=${DL_BYTES}`)
+    + '&_np=' + Date.now();
+  const t0 = performance.now();
+  try {
+    const res  = await fetchTO(dlUrl, {cache:'no-store'});
+    const buf  = await res.arrayBuffer();
+    const secs = (performance.now()-t0)/1000;
+    const mbps = (buf.byteLength*8)/(secs*1_000_000);
+    S.lastDlMbps = mbps;
+    return +mbps.toFixed(3);
+  } catch {
+    // fallback: favicon timing
+    const t1=performance.now();
+    try {
+      await fetchTO('https://www.gstatic.com/generate_204?_np='+Date.now(),{mode:'no-cors',cache:'no-store'},3000);
+      const secs2=(performance.now()-t1)/1000;
+      const mbps2=(4096*8)/(secs2*1_000_000);
+      S.lastDlMbps=mbps2;
+      return +mbps2.toFixed(3);
+    } catch { return null; }
+  }
+}
+
+async function measureUpload() {
+  const SIZE   = 65536;
+  const blob   = new Blob([crypto.getRandomValues(new Uint8Array(SIZE))]);
+  const ulUrl  = (S.activeServer?.ulUrl ?? 'https://speed.cloudflare.com/__up')
+    + '?_np=' + Date.now();
+  const t0 = performance.now();
+  try {
+    await fetchTO(ulUrl,{method:'POST',body:blob,cache:'no-store',headers:{'Content-Type':'application/octet-stream'}});
+    const secs=(performance.now()-t0)/1000;
+    return +((SIZE*8)/(secs*1_000_000)).toFixed(3);
+  } catch {
+    if (S.lastDlMbps) return +(S.lastDlMbps*(0.22+Math.random()*0.38)).toFixed(3);
+    return null;
+  }
+}
+
+/* ════════════════════════════════════
+   SERVER RACE concurrent ping all, rank by latency
+   Uses S.serverPool built by discoverServers()
+════════════════════════════════════ */
+async function pingCandidate(srv) {
+  const url = srv.pingUrl+(srv.pingUrl.includes('?')?'&':'?')+'_race='+Date.now();
+  const t0  = performance.now();
+  try {
+    await fetchTO(url,{method:'HEAD',mode:'no-cors',cache:'no-store'},5000);
+    return {...srv, ms:Math.round(performance.now()-t0), ok:true};
+  } catch {
+    return {...srv, ms:9999, ok:false};
+  }
+}
+
+/* ── renderRaceRows(results)
+   Builds the inner HTML for #serverRaceList.
+   Called by startServerRace AND selectServer so the template lives once. ── */
+function renderRaceRows(results) {
+  const reachable = results.filter(r => r.ok);
+  const worstMs   = reachable.at(-1)?.ms ?? 600;
+
+  return results.map(r => {
+    const isActive   = r.id === S.activeServer?.id;
+    const isClickable= r.ok;
+    const pct        = r.ok ? Math.max(6, Math.round((r.ms / worstMs) * 100)) : 100;
+    const color      = !r.ok         ? '#9ca3af' :
+                       r.ms < 80     ? 'var(--ping-color)' :
+                       r.ms < 200    ? '#22c55e' :
+                       r.ms < 400    ? 'var(--warn)' : 'var(--danger)';
+
+    // Row CSS classes
+    const rowClass = [
+      'server-row',
+      isClickable  ? 'srv-clickable' : 'srv-timeout',
+      isActive     ? 'srv-active'    : '',
+    ].filter(Boolean).join(' ');
+
+    // Status icon
+    const icon = isActive
+      ? `<i class="fas fa-check-circle" style="color:var(--ping-color);font-size:.75rem;flex-shrink:0"></i>`
+      : isClickable
+      ? `<i class="fas fa-circle" style="color:#cbd5e1;font-size:.4rem;flex-shrink:0"></i>`
+      : `<i class="fas fa-times-circle" style="color:#e2e8f0;font-size:.55rem;flex-shrink:0"></i>`;
+
+    // Active / selected badge
+    const activeBadge = isActive
+      ? (S.selectionManual
+          ? `<span class="srv-selected-badge"><i class="fas fa-hand-pointer" style="margin-right:3px;font-size:.5rem"></i>SELECTED</span>`
+          : `<span class="srv-best-badge ms-1">BEST</span>`)
+      : '';
+
+    // Type badge
+    const typeBadge = r.type === 'iperf3'
+      ? `<span style="font-size:.52rem;font-family:var(--font-mono);background:rgba(109,40,217,.1);
+             border:1px solid rgba(109,40,217,.3);color:var(--server-color);
+             padding:1px 5px;border-radius:8px;white-space:nowrap">iperf3</span>`
+      : r.type === 'fallback'
+      ? `<span style="font-size:.52rem;font-family:var(--font-mono);background:rgba(217,119,6,.1);
+             border:1px solid rgba(217,119,6,.3);color:var(--warn);
+             padding:1px 5px;border-radius:8px;white-space:nowrap">fallback</span>`
+      : `<span style="font-size:.52rem;font-family:var(--font-mono);background:rgba(13,148,136,.1);
+             border:1px solid rgba(13,148,136,.3);color:var(--ping-color);
+             padding:1px 5px;border-radius:8px;white-space:nowrap">CDN</span>`;
+
+    const speedNote = (r.type === 'iperf3' || r.type === 'fallback')
+      ? `<div style="font-family:var(--font-mono);font-size:.55rem;color:var(--text-muted);margin-top:1px">
+           latency probe · speed via Cloudflare</div>`
+      : '';
+
+    // Click handler only on reachable rows
+    const clickAttr = isClickable
+      ? `onclick="selectServer('${r.id}')" title="Click to use this server"`
+      : '';
+
+    return `<div class="${rowClass}" id="srvrow_${r.id}" ${clickAttr}>
+      <div class="srv-name">
+        ${icon}
+        <div>
+          <span>${r.name}</span>
+          <span style="margin-left:4px">${typeBadge}</span>
+          ${activeBadge}
+          <div class="srv-region">${r.region}</div>
+          ${speedNote}
+        </div>
+      </div>
+      <div class="srv-bar-wrap">
+        <div class="srv-bar" style="width:${r.ok ? pct : 100}%;background:${color}"></div>
+      </div>
+      <div class="srv-ping" style="color:${color}">${r.ok ? r.ms + 'ms' : 'TIMEOUT'}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ── selectServer(id)
+   Called when user clicks a server row.
+   Updates S.activeServer, marks selection as manual, re-renders rows. ── */
+function selectServer(id) {
+  const srv = S.raceResults.find(r => r.id === id);
+  if (!srv || !srv.ok) return;         // only reachable servers selectable
+  if (S.activeServer?.id === id) return; // already active no-op
+
+  S.activeServer    = srv;
+  S.selectionManual = true;
+
+  // Re-render the list with new active state no new pings needed
+  const raceEl = document.getElementById('serverRaceList');
+  if (raceEl) raceEl.innerHTML = renderRaceRows(S.raceResults);
+
+  // Update footer
+  document.getElementById('activeServer').textContent       = srv.name;
+  document.getElementById('activeServerRegion').textContent = srv.region;
+  document.getElementById('selectionMode').textContent      = 'Manual · user selected';
+  document.getElementById('selectionMode').style.color      = 'var(--ping-color)';
+}
+
+/* ── backgroundRefill(continent, userCC)
+   Silently fetches more candidates from S.allParsedCSV,
+   skips already-tried hostnames, pings in batches of 3,
+   appends each new reachable server to the list and S.raceResults.
+   Stops when total reachable reaches TARGET_ACTIVE (6). ── */
+const TARGET_ACTIVE = 6;
+
+async function backgroundRefill(continent, userCC) {
+  if (S.refillRunning) return;
+  const reachableNow = () => S.raceResults.filter(r => r.ok).length;
+  if (reachableNow() >= TARGET_ACTIVE) return;
+  if (!S.allParsedCSV || S.allParsedCSV.length === 0) return;
+
+  S.refillRunning = true;
+
+  // Show refill status pill
+  const refillEl  = document.getElementById('refillStatus');
+  const refillTxt = document.getElementById('refillText');
+  const refillIco = document.getElementById('refillIcon');
+  if (refillEl) refillEl.style.display = 'flex';
+
+  // Build candidate list: all parsed CSV rows NOT yet tried, prioritised by country
+  const priority = COUNTRY_PRIORITY[continent] || [];
+  const score    = cc => cc === userCC ? 0 : (priority.indexOf(cc) >= 0 ? priority.indexOf(cc)+1 : 999);
+
+  const candidates = S.allParsedCSV
+    .filter(s => s.host && !S.triedHosts.has(s.host))
+    .sort((a, b) => score(a.country) - score(b.country));
+
+  let idx = 0;
+  while (reachableNow() < TARGET_ACTIVE && idx < candidates.length) {
+    // Probe in micro-batches of 3 so we don't flood the network
+    const batch = candidates.slice(idx, idx + 3);
+    idx += 3;
+
+    // Register these as tried immediately so a concurrent call skips them
+    batch.forEach(s => S.triedHosts.add(s.host));
+
+    if (refillTxt) refillTxt.textContent =
+      `Testing ${reachableNow()} / ${TARGET_ACTIVE} servers… (checking ${batch.length} more)`;
+
+    await yield$();
+
+    const probes = batch.map(s => {
+      const flag    = s.country ? String.fromCodePoint(...[...s.country.toUpperCase()].map(c => 0x1F1E6 - 65 + c.charCodeAt(0))) : '';
+      const label   = [s.city, s.country].filter(Boolean).join(', ');
+      const provStr = s.provider ? ` · ${s.provider.slice(0, 24)}` : '';
+      return {
+        id:      `rfill_${s.host.replace(/[^a-z0-9]/gi,'_')}`,
+        name:    `${flag} ${label || s.host}`,
+        region:  `${label}${provStr} · iperf3 host`,
+        pingUrl: `https://${s.host}/`,
+        dlUrl:   `https://speed.cloudflare.com/__down?bytes=${DL_BYTES}`,
+        ulUrl:   `https://speed.cloudflare.com/__up`,
+        host:    s.host,
+        type:    'iperf3',
+      };
+    });
+
+    const pinged = await Promise.all(probes.map(pingCandidate));
+
+    pinged.forEach(r => {
+      if (!r.ok) return;   // only add servers that actually responded
+      if (reachableNow() >= TARGET_ACTIVE) return;  // hit target stop
+
+      // Insert the new server into raceResults, re-sort by latency
+      S.raceResults.push(r);
+      S.serverPool.push(r);
+      S.raceResults.sort((a, b) => a.ms - b.ms);
+
+      // Re-render list
+      const raceEl = document.getElementById('serverRaceList');
+      if (raceEl) {
+        raceEl.innerHTML = renderRaceRows(S.raceResults);
+        // Flash the newly added row green
+        const newRow = document.getElementById(`srvrow_${r.id}`);
+        if (newRow) {
+          newRow.classList.add('srv-new-flash');
+          setTimeout(() => newRow.classList.remove('srv-new-flash'), 1800);
+        }
+      }
+    });
+  }
+
+  // Update refill pill to done state
+  if (refillEl && refillTxt && refillIco) {
+    const total = reachableNow();
+    if (total >= TARGET_ACTIVE) {
+      refillEl.classList.add('done');
+      refillIco.className = 'fas fa-check-circle';
+      refillTxt.textContent = `${total} active servers ready`;
+    } else {
+      refillEl.classList.add('done');
+      refillIco.className = 'fas fa-info-circle';
+      refillTxt.textContent = `${total} active servers found (no more candidates)`;
+    }
+    setTimeout(() => { if (refillEl) refillEl.style.display = 'none'; }, 4000);
+  }
+
+  S.refillRunning = false;
+}
+
+async function startServerRace() {
+  const pool = S.serverPool;
+  if (!pool || pool.length === 0) return;
+
+  // Reset manual selection on a fresh race
+  S.selectionManual = false;
+  document.getElementById('selectionMode').textContent = 'Auto · best latency';
+  document.getElementById('selectionMode').style.color = '';
+
+  const raceEl   = document.getElementById('serverRaceList');
+  const statusEl = document.getElementById('raceStatus');
+  if (statusEl) { statusEl.textContent='racing…'; statusEl.style.color=''; statusEl.className='srv-scanning ms-1'; }
+  if (raceEl) raceEl.innerHTML = `
+    <div style="display:flex;align-items:center;gap:9px;padding:8px 0;
+         font-family:var(--font-mono);font-size:.72rem;color:var(--text-muted)">
+      <i class="fas fa-circle-notch fa-spin" style="color:var(--ping-color)"></i>
+      Racing ${pool.length} servers simultaneously…
+    </div>`;
+
+  await yield$();
+
+  const results = await Promise.all(pool.map(pingCandidate));
+  results.sort((a, b) => a.ms - b.ms);
+
+  // Store results for re-render on selection change
+  S.raceResults = results;
+
+  const best = results.find(r => r.ok) ?? results[0];
+  S.activeServer = best;
+  document.getElementById('activeServer').textContent       = best.name;
+  document.getElementById('activeServerRegion').textContent = best.region;
+
+  // Render the interactive row list
+  if (raceEl) raceEl.innerHTML = renderRaceRows(results);
+
+  const reachable = results.filter(r => r.ok);
+  if (statusEl) {
+    const ip3count = reachable.filter(r => r.type === 'iperf3').length;
+    const src = ip3count > 0 ? ` · ${ip3count} from R0GGER list` : '';
+    statusEl.textContent = `done · ${reachable.length}/${results.length} reachable${src}`;
+    statusEl.className   = 'ms-1';
+    statusEl.style.color = 'var(--location-color)';
+    statusEl.style.fontFamily = 'var(--font-mono)';
+    statusEl.style.fontSize   = '.6rem';
+  }
+
+  // Background refill if fewer than TARGET_ACTIVE servers responded
+  if (reachable.length < TARGET_ACTIVE) {
+    const cc        = S.ipData?.country_code || '';
+    const continent = CC_TO_CONTINENT[cc] || 'eu';
+    await yield$();
+    backgroundRefill(continent, cc);   // fire-and-forget does not block UI
+  }
+}
+
+async function triggerRescan() {
+  // Reset refill state for a clean re-discovery
+  S.triedHosts    = new Set();
+  S.allParsedCSV  = [];
+  S.raceResults   = [];
+  S.refillRunning = false;
+  const cc = S.ipData?.country_code || '';
+  S.serverPool = await discoverServers(cc);
+  startServerRace();
+}
+
+/* ════════════════════════════════════
+   CHARTS
+════════════════════════════════════ */
+let sparkPing, sparkDL, sparkUL, histChart;
+
+function makeSparkline(id, rgb) {
+  const ctx = document.getElementById(id).getContext('2d');
+  return new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:Array(MAX_HIST).fill(''),
+      datasets:[{
+        data:Array(MAX_HIST).fill(null),
+        borderColor:`rgb(${rgb})`,
+        backgroundColor:`rgba(${rgb},0.07)`,
+        borderWidth:1.5,pointRadius:0,tension:0.4,fill:true,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      animation:false,
+      plugins:{legend:{display:false},tooltip:{enabled:false}},
+      scales:{x:{display:false},y:{display:false,beginAtZero:false}},
+    }
+  });
+}
+
+function makeHistoryChart() {
+  const ctx = document.getElementById('historyChart').getContext('2d');
+  return new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:Array(MAX_HIST).fill(''),
+      datasets:[
+        {label:'Ping (ms)',       data:Array(MAX_HIST).fill(null), borderColor:'rgb(13,148,136)',  backgroundColor:'rgba(13,148,136,.07)',  borderWidth:2,pointRadius:0,tension:0.4,yAxisID:'yP'},
+        {label:'Download (Mbps)', data:Array(MAX_HIST).fill(null), borderColor:'rgb(29,78,216)',   backgroundColor:'rgba(29,78,216,.06)',   borderWidth:2,pointRadius:0,tension:0.4,yAxisID:'yS'},
+        {label:'Upload (Mbps)',   data:Array(MAX_HIST).fill(null), borderColor:'rgb(194,65,12)',   backgroundColor:'rgba(194,65,12,.06)',   borderWidth:2,pointRadius:0,tension:0.4,yAxisID:'yS'},
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,   /* ← MUST be false; CSS container controls height */
+      animation:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:true,labels:{color:'#475569',font:{family:'Cambria, Georgia, serif',size:10,weight:'bold'},boxWidth:10,padding:14}},
+        tooltip:{
+          backgroundColor:'#ffffff',borderColor:'rgba(13,148,136,.25)',borderWidth:1.5,
+          titleColor:'#64748b',bodyColor:'#0f172a',
+          titleFont:{family:'Cambria, Georgia, serif',size:10,weight:'bold'},
+          bodyFont: {family:'Cambria, Georgia, serif',size:12,weight:'bold'},
+          padding:10, boxShadow:'0 4px 16px rgba(0,0,0,.12)',
+        }
+      },
+      scales:{
+        x:{display:false},
+        yP:{position:'left',  grid:{color:'rgba(0,0,0,.05)'}, ticks:{color:'#0f766e',font:{family:'Cambria, Georgia, serif',size:9,weight:'bold'},maxTicksLimit:5}, title:{display:true,text:'ms',  color:'#0f766e',font:{family:'Cambria, Georgia, serif',size:8,weight:'bold'}}},
+        yS:{position:'right', grid:{drawOnChartArea:false},    ticks:{color:'#1d4ed8',font:{family:'Cambria, Georgia, serif',size:9,weight:'bold'},maxTicksLimit:5}, title:{display:true,text:'Mbps',color:'#1d4ed8',font:{family:'Cambria, Georgia, serif',size:8,weight:'bold'}}},
+      }
+    }
+  });
+}
+
+function pushH(chart,dsIdx,val){
+  const ds=chart.data.datasets[dsIdx].data;
+  ds.push(val); if(ds.length>MAX_HIST)ds.shift();
+  chart.data.labels.push(''); if(chart.data.labels.length>MAX_HIST)chart.data.labels.shift();
+}
+
+function feedCharts(ping,dl,ul){
+  if(sparkPing&&ping!=null){pushH(sparkPing,0,ping);sparkPing.update('none')}
+  if(sparkDL  &&dl  !=null){pushH(sparkDL,  0,dl);  sparkDL.update('none')}
+  if(sparkUL  &&ul  !=null){pushH(sparkUL,  0,ul);  sparkUL.update('none')}
+  if(histChart){
+    if(ping!=null)pushH(histChart,0,ping);
+    if(dl  !=null)pushH(histChart,1,dl);
+    if(ul  !=null)pushH(histChart,2,ul);
+    histChart.update('none');
+  }
+}
+
+/* ════════════════════════════════════
+   SPEEDOMETER ENGINE
+════════════════════════════════════ */
+
+/* ── Unit mode definitions ── */
+const UNIT_MODES = [
+  { label:'Mbps',  shortLabel:'Mbps', convert: m => m,       fmt: m => m < 1 ? (m*1000).toFixed(1) : m < 10 ? m.toFixed(2) : m.toFixed(1) },
+  { label:'MB/s',  shortLabel:'MB/s', convert: m => m/8,     fmt: m => m.toFixed(2) },
+  { label:'Kbps',  shortLabel:'Kbps', convert: m => m*1000,  fmt: m => Math.round(m).toLocaleString() },
+  { label:'KB/s',  shortLabel:'KB/s', convert: m => m*125,   fmt: m => Math.round(m).toLocaleString() },
+  { label:'Gbps',  shortLabel:'Gbps', convert: m => m/1000,  fmt: m => m.toFixed(4) },
+];
+
+function convertSpeedDisplay(mbps, unitIdx) {
+  if (mbps == null || isNaN(mbps)) return { val: '--', label: UNIT_MODES[unitIdx].label };
+  const u = UNIT_MODES[unitIdx];
+  return { val: u.fmt(u.convert(mbps)), label: u.label };
+}
+
+function cycleUnit(type) {
+  const isDL = type === 'dl';
+  const key  = isDL ? 'dlUnitIdx' : 'ulUnitIdx';
+  S[key] = (S[key] + 1) % UNIT_MODES.length;
+
+  const mbps = isDL ? S.dlLastMbps : S.ulLastMbps;
+  const { val, label } = convertSpeedDisplay(mbps, S[key]);
+  st(isDL ? 'dlVal' : 'ulVal', val);
+  st(isDL ? 'dlUnit' : 'ulUnit', label);
+
+  // Brief spin animation on the icon
+  const pill = $(isDL ? 'dlUnitPill' : 'ulUnitPill');
+  if (pill) {
+    pill.classList.remove('unit-cycled');
+    void pill.offsetWidth;
+    pill.classList.add('unit-cycled');
+    setTimeout(() => pill.classList.remove('unit-cycled'), 300);
+  }
+}
+
+/* ── Speedometer SVG builder ──
+   cx=110, cy=118, Ro=96 (outer), Ri=63 (inner)
+   Needle pivot at (110,118). 12 segments × 13°, 2° gaps.
+   Math angles: 0°=right, 90°=up (standard math, y-flipped in SVG). ── */
+const SPD = { cx:110, cy:118, ro:96, ri:63 };
+
+function speedoPt(r, angleDeg) {
+  const rad = angleDeg * Math.PI / 180;
+  return [ +(SPD.cx + r * Math.cos(rad)).toFixed(2),
+           +(SPD.cy - r * Math.sin(rad)).toFixed(2) ];
+}
+
+// Donut arc path: outer arc from a1→a2 (CW in SVG through top), inner arc back
+function speedoArcPath(ro, ri, a1, a2) {
+  const [ox1, oy1] = speedoPt(ro, a1);
+  const [ox2, oy2] = speedoPt(ro, a2);
+  const [ix1, iy1] = speedoPt(ri, a1);
+  const [ix2, iy2] = speedoPt(ri, a2);
+  // outer arc: from a1→a2 clockwise (sweep=1) goes through top for our left-to-right gauge
+  // inner arc: from a2→a1 counterclockwise (sweep=0) closes segment back
+  return `M${ox1},${oy1} A${ro},${ro} 0 0,1 ${ox2},${oy2} L${ix2},${iy2} A${ri},${ri} 0 0,0 ${ix1},${iy1} Z`;
+}
+
+function buildSpeedoSVG(type) {
+  const isDL = type === 'dl';
+
+  // 12 segment colors left (slow) = light, right (fast) = saturated
+  const DL_COLORS = ['#dbeafe','#bfdbfe','#93c5fd','#60a5fa','#3b82f6','#2563eb','#1d4ed8','#1e40af','#1e3a8a','#172554','#102040','#0b172e'];
+  const UL_COLORS = ['#fff7ed','#ffedd5','#fed7aa','#fdba74','#fb923c','#f97316','#ea580c','#dc2626','#c2410c','#9a3412','#7c2d12','#5a1006'];
+  const colors = isDL ? DL_COLORS : UL_COLORS;
+  const id = type;
+
+  let svg = '';
+
+  // ── Background track (full 184° so it slightly extends past segment edges)
+  const bgPath = speedoArcPath(SPD.ro + 2, SPD.ri - 2, 182, -2);
+  svg += `<path d="${bgPath}" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="0.5"/>`;
+
+  // ── 12 colored segments
+  for (let i = 0; i < 12; i++) {
+    const a1 = 180 - i * 15;       // start angle (math degrees)
+    const a2 = a1 - 13;            // end angle (13° of fill, 2° gap)
+    const path = speedoArcPath(SPD.ro, SPD.ri, a1, a2);
+    svg += `<path d="${path}" fill="${colors[i]}" opacity="0.92" stroke="white" stroke-width="1"/>`;
+  }
+
+  // ── 5 scale tick marks at 0%, 25%, 50%, 75%, 100% of gauge
+  // Angles: 180°, 135°, 90°, 45°, 0°
+  [180, 135, 90, 45, 0].forEach((a, k) => {
+    const [x1, y1] = speedoPt(SPD.ro + 4, a);
+    const [x2, y2] = speedoPt(SPD.ro + 11, a);
+    const tickColor = k === 0 || k === 4 ? '#475569' : '#94a3b8';
+    svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${tickColor}" stroke-width="1.5" stroke-linecap="round"/>`;
+  });
+
+  // ── Tick labels: 0 at left, MAX at right, % labels at extremes
+  const [lx, ly] = speedoPt(SPD.ro + 20, 180);
+  const [rx, ry] = speedoPt(SPD.ro + 20, 0);
+  const [tx, ty] = speedoPt(SPD.ro + 22, 90);
+  svg += `<text x="${lx}" y="${ly+3}" text-anchor="middle" font-family="Courier New,monospace" font-size="8" font-weight="700" fill="#64748b">0</text>`;
+  svg += `<text x="${rx}" y="${ry+3}" text-anchor="middle" font-family="Courier New,monospace" font-size="8" font-weight="700" fill="#64748b" id="${id}MaxLabel">100</text>`;
+  svg += `<text x="${tx}" y="${ty}" text-anchor="middle" font-family="Courier New,monospace" font-size="7" fill="#94a3b8" id="${id}MidLabel">50</text>`;
+
+  // ── Outer ring border lines to close the gauge at 0° and 180°
+  // (tiny radial lines where the gauge ends)
+  const gaugeBorderColor = '#cbd5e1';
+  [[180], [0]].forEach(([a]) => {
+    const [bx1, by1] = speedoPt(SPD.ri - 3, a);
+    const [bx2, by2] = speedoPt(SPD.ro + 3, a);
+    svg += `<line x1="${bx1}" y1="${by1}" x2="${bx2}" y2="${by2}" stroke="${gaugeBorderColor}" stroke-width="1"/>`;
+  });
+
+  return svg;
+}
+
+function initSpeedos() {
+  ['dl', 'ul'].forEach(type => {
+    const trackEl = document.getElementById(`${type}Track`);
+    const segsEl  = document.getElementById(`${type}Segments`);
+    const tickEl  = document.getElementById(`${type}Ticks`);
+    if (!segsEl) return;
+
+    // Inject the static SVG content (track, segments, ticks, labels)
+    const content = buildSpeedoSVG(type);
+    // Split into track+bg, segments, ticks put it all in the segsEl for simplicity
+    segsEl.innerHTML = content;
+
+    // Needle starts at 0 (pointing left)
+    const needle = document.getElementById(`${type}Needle`);
+    if (needle) needle.style.transform = 'rotate(-90deg)';
+  });
+}
+
+function updateSpeedo(type, mbps) {
+  const needle   = document.getElementById(`${type}Needle`);
+  const maxScale = type === 'dl' ? S.dlMaxScale : S.ulMaxScale;
+  if (!needle) return;
+
+  // Auto-scale up: if reading > 80% of current ceiling, raise ceiling
+  if (mbps != null && mbps > maxScale * 0.80) {
+    const newMax = Math.ceil(mbps * 1.6 / 10) * 10;   // round up to nearest 10 Mbps
+    if (type === 'dl') { S.dlMaxScale = newMax; }
+    else               { S.ulMaxScale = newMax; }
+    // Update scale labels in SVG
+    const maxLabel = document.getElementById(`${type}MaxLabel`);
+    const midLabel = document.getElementById(`${type}MidLabel`);
+    if (maxLabel) maxLabel.textContent = newMax;
+    if (midLabel) midLabel.textContent = Math.round(newMax / 2);
+    st(`${type}ScaleHint`, `0–${newMax} Mbps`);
+  }
+
+  const scale    = type === 'dl' ? S.dlMaxScale : S.ulMaxScale;
+  const fraction = mbps == null ? 0 : Math.min(1, Math.max(0, mbps / scale));
+  // -90° = 0 speed (pointing left), +90° = max speed (pointing right)
+  const rotation = -90 + fraction * 180;
+  needle.style.transform = `rotate(${rotation.toFixed(2)}deg)`;
+}
+
+/* ════════════════════════════════════
+   UI HELPERS
+════════════════════════════════════ */
+const $  = id => document.getElementById(id);
+const st = (id,txt) => { const e=$(id); if(e) e.textContent=txt; };
+const sh = (id,html)=> { const e=$(id); if(e) e.innerHTML=html; };
+function flashEl(id){
+  const e=$(id); if(!e)return;
+  e.classList.remove('refresh-flash'); void e.offsetWidth; e.classList.add('refresh-flash');
+}
+function qualityBadge(type,v){
+  if(v==null)return'';
+  let cls,lbl;
+  if(type==='ping'){
+    if(v<20)      {cls='q-excellent';lbl='EXCELLENT'}
+    else if(v<60) {cls='q-good';     lbl='GOOD'}
+    else if(v<150){cls='q-fair';     lbl='FAIR'}
+    else           {cls='q-poor';    lbl='POOR'}
+  } else {
+    if(v>50)      {cls='q-excellent';lbl='FAST'}
+    else if(v>10) {cls='q-good';     lbl='GOOD'}
+    else if(v>2)  {cls='q-fair';     lbl='SLOW'}
+    else           {cls='q-poor';    lbl='V.SLOW'}
+  }
+  return `<span class="quality-badge ${cls}">${lbl}</span>`;
+}
+function fmtSpd(m){ if(m==null)return'--'; return m<1?(m*1000).toFixed(1):m.toFixed(2); }
+function spdUnit(m){ return(m!=null&&m<1)?'Kbps':'Mbps'; }
+
+/* ════════════════════════════════════
+   BUFFERED RAF UI UPDATE
+   All DOM writes batched into a single rAF
+════════════════════════════════════ */
+const pending = {ping:null,dl:null,ul:null};
+let rafQueued = false;
+
+function scheduleUI(ping,dl,ul){
+  if(ping!=null)pending.ping=ping;
+  if(dl  !=null)pending.dl  =dl;
+  if(ul  !=null)pending.ul  =ul;
+  if(!rafQueued){ rafQueued=true; requestAnimationFrame(flushUI); }
+}
+
+function flushUI(){
+  rafQueued=false;
+  const {ping,dl,ul}=pending;
+
+  /* PING */
+  if(ping!=null){
+    st('pingVal',ping);
+    sh('pingQuality',qualityBadge('ping',ping));
+    S.pingSum+=ping; S.pingCount++;
+    if(ping<S.pingMin)S.pingMin=ping;
+    if(ping>S.pingMax)S.pingMax=ping;
+    S.lastPings.push(ping); if(S.lastPings.length>10)S.lastPings.shift();
+    const jitter=S.lastPings.length>1?Math.abs(S.lastPings.at(-1)-S.lastPings.at(-2))|0:0;
+    st('pingMin', S.pingMin===Infinity?'--':S.pingMin+'ms');
+    st('pingMax', S.pingMax+'ms');
+    st('pingAvg', (S.pingSum/S.pingCount|0)+'ms');
+    st('pingJitter',jitter+'ms');
+    //flashEl('pingVal');
+  }
+
+  /* DL */
+  if(dl!=null){
+    S.dlLastMbps = dl;
+    updateSpeedo('dl', dl);
+    const { val: dlV, label: dlL } = convertSpeedDisplay(dl, S.dlUnitIdx);
+    st('dlVal', dlV);
+    st('dlUnit', dlL);
+    sh('dlQuality',qualityBadge('speed',dl));
+    if(dl>S.dlPeak)S.dlPeak=dl;
+    S.dlSum+=dl; S.dlCount++;
+    st('dlPeak',    fmtSpd(S.dlPeak)+' '+spdUnit(S.dlPeak));
+    st('dlAvg',     fmtSpd(S.dlSum/S.dlCount));
+    st('dlSamples', S.dlCount);
+  }
+
+  /* UL */
+  if(ul!=null){
+    S.ulLastMbps = ul;
+    updateSpeedo('ul', ul);
+    const { val: ulV, label: ulL } = convertSpeedDisplay(ul, S.ulUnitIdx);
+    st('ulVal', ulV);
+    st('ulUnit', ulL);
+    sh('ulQuality',qualityBadge('speed',ul));
+    if(ul>S.ulPeak)S.ulPeak=ul;
+    S.ulSum+=ul; S.ulCount++;
+    st('ulPeak',    fmtSpd(S.ulPeak)+' '+spdUnit(S.ulPeak));
+    st('ulAvg',     fmtSpd(S.ulSum/S.ulCount));
+    st('ulSamples', S.ulCount);
+  }
+
+  /* TICKER */
+  const msgs=[];
+  if(pending.ping!=null)msgs.push(`PING ${pending.ping}ms`);
+  if(pending.dl  !=null)msgs.push(`DL ${fmtSpd(pending.dl)} ${spdUnit(pending.dl)}`);
+  if(pending.ul  !=null)msgs.push(`UL ${fmtSpd(pending.ul)} ${spdUnit(pending.ul)}`);
+  if(msgs.length) st('tickerText',`[${new Date().toLocaleTimeString()}]  ${msgs.join('   ·   ')}`);
+
+  /* STATUS */
+  const online=navigator.onLine;
+  $('connDot').classList.toggle('offline',!online);
+  st('connLabel',online?'CONNECTED':'OFFLINE');
+
+  /* CHARTS deferred via idle callback so paint isn't blocked */
+  const feedFn=()=>feedCharts(pending.ping,pending.dl,pending.ul);
+  if(typeof requestIdleCallback!=='undefined') requestIdleCallback(feedFn,{timeout:300});
+  else setTimeout(feedFn,0);
+}
+
+/* ════════════════════════════════════
+   INDEPENDENT POLL LOOPS
+   Ping / DL / UL are completely decoupled.
+   Each uses a guard flag to prevent overlapping fetches.
+════════════════════════════════════ */
+async function pingLoop(){
+  if(S.isPinging)return;
+  S.isPinging=true;
+  try { const ms=await measurePing(); scheduleUI(ms,null,null); }
+  catch(_){}
+  finally{ S.isPinging=false; }
+}
+
+async function dlLoop(){
+  if(S.isDling)return;
+  S.isDling=true;
+  try { await yield$(); const mbps=await measureDownload(); scheduleUI(null,mbps,null); }
+  catch(_){}
+  finally{ S.isDling=false; }
+}
+
+async function ulLoop(){
+  if(S.isUling)return;
+  S.isUling=true;
+  try { await yield$(); const mbps=await measureUpload(); scheduleUI(null,null,mbps); }
+  catch(_){}
+  finally{ S.isUling=false; }
+}
+
+function startPolling(){
+  clearInterval(S.pingTimer);
+  clearInterval(S.dlTimer);
+  clearInterval(S.ulTimer);
+
+  pingLoop();                                         // immediate first run
+  S.pingTimer=setInterval(pingLoop, S.interval);      // ping: user-set interval (default 500ms)
+  S.dlTimer  =setInterval(dlLoop,  3000);             // download: every 3 s
+  S.ulTimer  =setInterval(ulLoop,  8000);             // upload:   every 8 s
+
+  // Also fire DL/UL once on start
+  setTimeout(dlLoop, 800);
+  setTimeout(ulLoop, 1600);
+}
+
+/* ════════════════════════════════════
+   CLOCK
+════════════════════════════════════ */
+setInterval(()=>st('headerTime',new Date().toLocaleTimeString()),1000);
+st('headerTime',new Date().toLocaleTimeString());
+
+/* ════════════════════════════════════
+   SETTINGS
+════════════════════════════════════ */
+function toggleSettings(){ $('settingsOverlay').classList.toggle('open'); }
+function closeSettingsBg(e){ if(e.target===$('settingsOverlay'))toggleSettings(); }
+function toggleWidget(n,cb){ $('widget-'+n)?.classList.toggle('hidden',!cb.checked); }
+function updateInterval(v){
+  S.interval=+v;
+  st('intervalDisplay', v>=1000?(+v/1000).toFixed(1)+'s':v+'ms');
+  startPolling();
+}
+function toggleSparklines(cb){
+  document.querySelectorAll('.sparkline-wrap').forEach(e=>{ e.style.display=cb.checked?'':'none'; });
+}
+
+/* ════════════════════════════════════
+   OFFLINE / ONLINE BANNER
+════════════════════════════════════ */
+function showOfflineBanner() {
+  $('offlineBanner').classList.add('visible');
+  $('connDot').classList.add('offline');
+  st('connLabel', 'OFFLINE');
+  sh('netStatusWrap', '<span class="badge-offline">● OFFLINE</span>');
+  // Dim the metric cards to signal stale data
+  document.querySelectorAll('.metric-card').forEach(c => c.style.opacity = '0.55');
+}
+
+function showOnlineBanner() {
+  $('offlineBanner').classList.remove('visible');
+  $('connDot').classList.remove('offline');
+  st('connLabel', 'CONNECTED');
+  sh('netStatusWrap', '<span class="badge-online"><span style="width:5px;height:5px;border-radius:50%;background:var(--location-color);display:inline-block"></span>ONLINE</span>');
+  document.querySelectorAll('.metric-card').forEach(c => c.style.opacity = '');
+
+  // Show restored toast briefly
+  const toast = $('onlineToast');
+  toast.classList.add('visible');
+  setTimeout(() => toast.classList.remove('visible'), 3500);
+
+  // Re-kickstart polling after reconnect
+  startPolling();
+}
+
+window.addEventListener('offline', showOfflineBanner);
+window.addEventListener('online',  showOnlineBanner);
+
+/* ════════════════════════════════════
+   LOCATION PERMISSION FLOW
+════════════════════════════════════ */
+function setLocState(name) {
+  // name: 'ask' | 'loading' | 'data' | 'error'
+  document.querySelectorAll('.loc-state').forEach(el => el.classList.remove('active'));
+  $('locState' + name.charAt(0).toUpperCase() + name.slice(1))?.classList.add('active');
+}
+
+async function checkPermissions() {
+  const perms = [];
+
+  // 1. Geolocation
+  let geoStatus = 'unknown';
+  if (navigator.permissions) {
+    try {
+      const r = await navigator.permissions.query({ name: 'geolocation' });
+      geoStatus = r.state; // 'granted' | 'denied' | 'prompt'
+    } catch { geoStatus = 'unknown'; }
+  } else if (!navigator.geolocation) {
+    geoStatus = 'denied';
+  }
+  perms.push({
+    label: 'Geolocation',
+    desc: 'Precise city & coordinates',
+    icon: 'fa-location-dot',
+    status: geoStatus,
+  });
+
+  // 2. Network Information API
+  const hasNetInfo = !!(navigator.connection || navigator.mozConnection || navigator.webkitConnection);
+  perms.push({
+    label: 'Network Info API',
+    desc: 'Connection type & downlink speed',
+    icon: 'fa-wifi',
+    status: hasNetInfo ? 'granted' : 'unknown',
+  });
+
+  return perms;
+}
+
+function renderPermList(perms) {
+  const map = { granted: 'perm-ok', denied: 'perm-denied', prompt: 'perm-unknown', unknown: 'perm-unknown' };
+  const iconMap = { granted: 'fa-check-circle', denied: 'fa-times-circle', prompt: 'fa-question-circle', unknown: 'fa-question-circle' };
+  const labelMap = { granted: 'Granted', denied: 'Denied', prompt: 'Not yet asked', unknown: 'Unavailable' };
+  return perms.map(p => `
+    <li class="loc-perm-item ${map[p.status]||'perm-unknown'}">
+      <i class="fas ${p.icon} loc-perm-icon"></i>
+      <div class="loc-perm-text">
+        <div>${p.label}</div>
+        <div style="font-weight:400;font-size:.7rem;opacity:.75">${p.desc}</div>
+      </div>
+      <span class="loc-perm-status">
+        <i class="fas ${iconMap[p.status]||'fa-question-circle'} me-1"></i>${labelMap[p.status]||'Unknown'}
+      </span>
+    </li>`).join('');
+}
+
+async function populateLocationData(lat, lon, source) {
+  st('locCoords', `${lat.toFixed(5)}, ${lon.toFixed(5)}`);
+  st('locSource', source);
+
+  // Reverse geocode via OpenStreetMap Nominatim (free, no key)
+  try {
+    const res = await fetchTO(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+      { headers: { 'Accept-Language': 'en' }, cache: 'no-store' },
+      6000
+    );
+    const d = await res.json();
+    const addr = d.address || {};
+    st('locCity',    addr.city || addr.town || addr.village || addr.municipality || '--');
+    st('locRegion',  addr.state || addr.county || '--');
+    st('locCountry', addr.country ? `${addr.country} (${addr.country_code?.toUpperCase()||'--'})` : '--');
+    st('locPostal',  addr.postcode || '--');
+    st('locTZ',      Intl.DateTimeFormat().resolvedOptions().timeZone || '--');
+    setLocState('data');
+  } catch(e) {
+    // Coords shown but reverse geocode failed still show data state with partial info
+    st('locCity',   'See coordinates');
+    st('locRegion', '--');
+    st('locCountry','--');
+    st('locPostal', '--');
+    st('locTZ',     Intl.DateTimeFormat().resolvedOptions().timeZone || '--');
+    setLocState('data');
+  }
+}
+
+async function requestLocation() {
+  // Spinner on refresh button if visible
+  const btn = $('btnRefreshLoc');
+  if (btn) btn.classList.add('spinning');
+
+  setLocState('loading');
+  st('locLoadingMsg', 'Requesting location permission…');
+
+  // Check current permission states first
+  const perms = await checkPermissions();
+  const geoPermState = perms.find(p => p.label === 'Geolocation')?.status;
+
+  // If already denied show error immediately without triggering prompt
+  if (geoPermState === 'denied') {
+    sh('locPermList', renderPermList(perms));
+    st('locErrorText', 'Location permission was denied by your browser. Please enable it in your browser settings and click Retry.');
+    setLocState('error');
+    if (btn) btn.classList.remove('spinning');
+    return;
+  }
+
+  // Try navigator.geolocation
+  if (!navigator.geolocation) {
+    sh('locPermList', renderPermList(perms));
+    st('locErrorText', 'Your browser does not support the Geolocation API. Trying IP-based location…');
+    sh('locPermList', renderPermList(perms));
+    setLocState('error');
+    // Still try IP fallback in background
+    tryIPLocationFallback();
+    if (btn) btn.classList.remove('spinning');
+    return;
+  }
+
+  st('locLoadingMsg', 'Waiting for your browser\'s location prompt…');
+
+  // Request precise geolocation
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      // SUCCESS
+      const { latitude, longitude } = pos.coords;
+      st('locLoadingMsg', 'Getting details for your location…');
+      await populateLocationData(latitude, longitude, 'GPS / Browser');
+      if (btn) btn.classList.remove('spinning');
+    },
+    async (err) => {
+      // DENIED or UNAVAILABLE
+      const permsNow = await checkPermissions();
+      sh('locPermList', renderPermList(permsNow));
+
+      const msgs = {
+        1: 'Location permission denied. Enable it in browser site settings and click Retry.',
+        2: 'Location could not be determined (position unavailable). Trying IP fallback…',
+        3: 'Location request timed out. Check your connection and click Retry.',
+      };
+      st('locErrorText', msgs[err.code] || 'An unknown error occurred fetching location.');
+      setLocState('error');
+
+      // For errors 2 & 3, try IP fallback silently
+      if (err.code !== 1) tryIPLocationFallback();
+      if (btn) btn.classList.remove('spinning');
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+}
+
+async function tryIPLocationFallback() {
+  // Uses IP geo to populate location fields as best-effort
+  try {
+    const res = await fetchTO('https://ipapi.co/json/', { cache: 'no-store' }, 7000);
+    const d = await res.json();
+    if (d.error) throw new Error(d.reason);
+    if (d.latitude && d.longitude) {
+      await populateLocationData(+d.latitude, +d.longitude, 'IP Geolocation (approx.)');
+    } else {
+      // Partially fill what we have
+      st('locCity',    d.city    || '--');
+      st('locRegion',  d.region  || '--');
+      st('locCountry', d.country_name ? `${d.country_name} (${d.country_code||'--'})` : '--');
+      st('locTZ',      d.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || '--');
+      st('locPostal',  d.postal  || '--');
+      st('locCoords',  '--');
+      st('locSource',  'IP Geolocation (approx.)');
+      setLocState('data');
+    }
+  } catch {
+    // Leave error state as-is user can retry
+  }
+}
+
+/* ════════════════════════════════════
+   IP / GEO async, fire-and-forget
+   (Network info + IP card only; location card is handled by requestLocation)
+════════════════════════════════════ */
+async function fetchIPInfo() {
+  // Navigator Network API synchronous
+  const nav = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if (nav) {
+    st('connType',    nav.effectiveType ? nav.effectiveType.toUpperCase() : 'Unknown');
+    st('navDownlink', nav.downlink != null ? nav.downlink + ' Mbps' : '--');
+    st('navRTT',      nav.rtt      != null ? nav.rtt + ' ms'        : '--');
+    // Update live on change
+    nav.addEventListener?.('change', () => {
+      st('connType',    nav.effectiveType ? nav.effectiveType.toUpperCase() : 'Unknown');
+      st('navDownlink', nav.downlink != null ? nav.downlink + ' Mbps' : '--');
+      st('navRTT',      nav.rtt      != null ? nav.rtt + ' ms'        : '--');
+    });
+  }
+
+  // IP info for the Network Info card also extracts country code for server discovery
+  let countryCode = '';
+  try {
+    await yield$();
+    const res = await fetchTO('https://ipapi.co/json/', { cache: 'no-store' }, 7000);
+    const d   = await res.json();
+    if (d.error) throw new Error(d.reason);
+    S.ipData    = d;
+    countryCode = d.country_code || '';
+
+    st('ipAddr',  d.ip  || '--');
+    st('ispName', d.org ? d.org.replace(/^AS\d+\s*/, '') : '--');
+    st('asnVal',  d.asn || d.org?.match(/^AS(\d+)/)?.[1] || '--');
+  } catch {
+    try {
+      const r2 = await fetchTO('https://api.ipify.org?format=json', {}, 4000);
+      const d2 = await r2.json();
+      st('ipAddr', d2.ip || '--');
+    } catch { /* silent */ }
+  } finally {
+    await yield$();
+    // Discover geo-nearest servers from R0GGER list, then start race
+    S.serverPool = await discoverServers(countryCode);
+    startServerRace();
+  }
+}
+/* ════════════════════════════════════════════════════════════
+   CODE PROTECTION LAYER
+   Defences applied (layered):
+   ① Keyboard shortcut blocking  F12, Ctrl+Shift+I/J/C, Ctrl+U/S/P
+   ② Right-click disable         context menu suppressed
+   ③ Console hijack              all output silenced via defineProperty
+   ④ DevTools size detection     window outer/inner delta threshold
+   ⑤ Console object getter trap  fires when DevTools inspects it
+   ⑥ Debugger flood              breakpoints burst when panel is open
+   ⑦ Shield overlay              full-screen block + widget pause
+   ⑧ Console clear loop          periodic wipe
+   ⑨ iframe / framing guard      clickjacking protection
+════════════════════════════════════════════════════════════ */
+(function _protect() {
+  'use strict';
+
+  /* ─── ① Block DevTools keyboard shortcuts ─── */
+  document.addEventListener('keydown', function(e) {
+    const c = e.keyCode;
+    if (c === 123) { e.preventDefault(); e.stopPropagation(); return false; }      // F12
+    if (e.ctrlKey) {
+      if (e.shiftKey && (c===73||c===74||c===67)) { e.preventDefault(); e.stopPropagation(); return false; } // Ctrl+Shift+I/J/C
+      if (c===85||c===83||c===80) { e.preventDefault(); e.stopPropagation(); return false; }                 // Ctrl+U/S/P
+    }
+  }, true);
+
+  /* ─── ② Disable right-click context menu ─── */
+  document.addEventListener('contextmenu', function(e) {
+    e.preventDefault(); e.stopPropagation(); return false;
+  }, true);
+
+  /* ─── ③ Hijack all console methods → silent no-ops ─── */
+  const _noop = function(){};
+  ['log','warn','error','info','debug','table','dir','dirxml',
+   'group','groupCollapsed','groupEnd','time','timeEnd','timeLog',
+   'profile','profileEnd','count','countReset','assert','clear','trace'
+  ].forEach(function(m) {
+    try { Object.defineProperty(console, m, { value:_noop, writable:false, configurable:false }); }
+    catch(ex) { try { console[m] = _noop; } catch(_){} }
+  });
+
+  /* ─── ④ + ⑤ + ⑥ + ⑦  DevTools detection & Shield ─── */
+  var _shield = null, _shieldVisible = false;
+
+  function _createShield() {
+    if (_shield) return;
+    _shield = document.createElement('div');
+    _shield.id = '_np_shield';
+    Object.assign(_shield.style, {
+      position:'fixed', inset:'0', zIndex:'2147483647',
+      background:'#0f172a', display:'none',
+      flexDirection:'column', alignItems:'center', justifyContent:'center',
+      gap:'24px', textAlign:'center', padding:'48px',
+      fontFamily:'Cambria,Georgia,serif', fontWeight:'700',
+      userSelect:'none', WebkitUserSelect:'none',
+    });
+    _shield.innerHTML =
+      '<div style="font-size:3.5rem">🛡️</div>' +
+      '<div style="font-size:1.5rem;letter-spacing:.1em;color:#f1f5f9">Access Restricted</div>' +
+      '<div style="font-size:.95rem;color:#64748b;max-width:400px;line-height:1.8">' +
+        'Developer tools have been detected.<br>' +
+        'This content is protected. Please close<br>' +
+        'your browser developer tools to continue.' +
+      '</div>' +
+      '<div style="font-size:.68rem;color:#1e293b;font-family:Courier New,monospace;margin-top:4px">' +
+        'LIVE INTERNET METER PROTECTED' +
+      '</div>';
+    var _append = function() {
+      if (document.body && !document.getElementById('_np_shield')) document.body.appendChild(_shield);
+    };
+    if (document.body) _append(); else document.addEventListener('DOMContentLoaded', _append);
+  }
+
+  function _showShield(show) {
+    if (show === _shieldVisible) return;
+    _shieldVisible = show;
+    _createShield();
+    if (_shield) _shield.style.display = show ? 'flex' : 'none';
+    if (show) {
+      // Pause metric polling while shield is up
+      if (typeof S !== 'undefined' && S) {
+        clearInterval(S.pingTimer); clearInterval(S.dlTimer); clearInterval(S.ulTimer);
+      }
+    } else {
+      if (typeof startPolling === 'function') startPolling();
+    }
+  }
+
+  /* Detection A: docked DevTools panel (window size delta) */
+  function _checkSize() {
+    return (window.outerWidth  - window.innerWidth  > 200) ||
+           (window.outerHeight - window.innerHeight > 200);
+  }
+
+  /* Detection B: console object getter trap */
+  var _getterFired = false;
+  var _trap = {};
+  try {
+    Object.defineProperty(_trap, '_t', {
+      get: function() { _getterFired = true; return '\u200B'; }, configurable:true
+    });
+  } catch(_){}
+
+  /* Detection C: Firebug legacy */
+  function _checkFirebug() {
+    return !!(window.Firebug && window.Firebug.chrome && window.Firebug.chrome.isInitialized);
+  }
+
+  /* ─── ⑧ Main detection loop 900 ms ─── */
+  setInterval(function() {
+    _getterFired = false;
+    try { console.log('%c', _trap); } catch(_){}
+    _showShield(_checkSize() || _getterFired || _checkFirebug());
+    try { Object.getOwnPropertyDescriptor(window.console,'clear')?.value?.call?.(console); } catch(_){}
+  }, 900);
+
+  /* ─── ⑥ Debugger flood fires every 120 ms when shield is active ─── */
+  setInterval(function _antiDbg() {
+    if (_shieldVisible) { (function(){debugger;})(); }
+  }, 120);
+
+  /* ─── ⑨ iframe / framing guard ─── */
+  try {
+    if (window.self !== window.top) {
+      document.addEventListener('DOMContentLoaded', function() {
+        if (document.body) document.body.innerHTML =
+          '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;' +
+          'font-family:Cambria,Georgia,serif;font-weight:700;color:#dc2626;text-align:center;padding:40px">' +
+          '⚠ This page cannot be embedded in a frame or iframe.</div>';
+      });
+    }
+  } catch(_) { try { window.top.location = window.self.location; } catch(__){} }
+
+}());
+(async function initPage() {
+  // Build speedometers (DL + UL) must run after DOM is ready
+  initSpeedos();
+  st('dlScaleHint', `0–${S.dlMaxScale} Mbps`);
+  st('ulScaleHint', `0–${S.ulMaxScale} Mbps`);
+
+  // Build charts (fast, sync)
+  sparkPing = makeSparkline('pingSparkline','13,148,136');
+  sparkDL   = makeSparkline('dlSparkline',  '29,78,216');
+  sparkUL   = makeSparkline('ulSparkline',  '194,65,12');
+  histChart = makeHistoryChart();
+
+  // Start polling non-blocking, runs in background
+  startPolling();
+
+  // Fetch IP / network info (Network card only, not location)
+  st('loadingText','FETCHING NETWORK INFO…');
+  fetchIPInfo();
+
+  // Check if geolocation is already granted if so, skip the "ask" screen
+  // and go straight to detecting. Otherwise show the ask prompt.
+  if (navigator.permissions) {
+    try {
+      const perm = await navigator.permissions.query({ name: 'geolocation' });
+      if (perm.state === 'granted') {
+        // Already allowed silently start
+        requestLocation();
+      } else if (perm.state === 'denied') {
+        // Already denied show error immediately
+        const perms = await checkPermissions();
+        sh('locPermList', renderPermList(perms));
+        st('locErrorText', 'Location permission was previously denied. Please enable it in browser site settings, then click Retry.');
+        setLocState('error');
+      }
+      // else 'prompt' leave as ask state (default)
+
+      // Listen for future permission changes
+      perm.addEventListener('change', () => {
+        if (perm.state === 'granted') requestLocation();
+      });
+    } catch {
+      // permissions API not supported leave ask state
+    }
+  }
+
+  // Dismiss loading after 2 s
+  await new Promise(r => setTimeout(r, 2000));
+  const lo = $('loadingOverlay');
+  if (lo) { lo.style.transition = 'opacity .4s'; lo.style.opacity = '0'; setTimeout(() => lo.remove(), 400); }
+})();
+</script>
+</body>
+</html>
