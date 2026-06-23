@@ -14,7 +14,7 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 /* ════════════════════════════════════════════════════════════
@@ -26,13 +26,13 @@
    the existing JavaScript keeps working unchanged.
 ════════════════════════════════════════════════════════════ */
 :root {
-  /* ── Surfaces ── */
-  --bg-page:    #edf1f7;
-  --bg-card:    #ffffff;
-  --bg-card2:   #f5f8fc;
-  --bg-header:  rgba(255,255,255,0.82);
+  /* ── Surfaces (dark carbon cockpit) ── */
+  --bg-page:    #060608;
+  --bg-card:    #101016;
+  --bg-card2:   #17171f;
+  --bg-header:  rgba(9,9,13,0.82);
 
-  --border:     #e4e9f2;
+  --border:     #24242e;
   --border-ping:rgba(13,148,136,0.40);
   --border-dl:  rgba(29,78,216,0.38);
   --border-ul:  rgba(194,65,12,0.38);
@@ -51,13 +51,13 @@
   --location-color:#15803d; /* green  */
 
   /* ── Ink ── */
-  --text-heading:#0f172a;
-  --text-primary:#334155;
-  --text-muted:  #64748b;
-  --text-light:  #94a3b8;
+  --text-heading:#f7f9fd;
+  --text-primary:#eef1f6;
+  --text-muted:  #c5ccd8;
+  --text-light:  #9aa2b2;
   --accent:      #0d9488;
-  --danger:      #dc2626;
-  --warn:        #d97706;
+  --danger:      #ff4d4d;
+  --warn:        #ffb020;
 
   /* ── Layered shadows ── */
   --shadow-card: 0 1px 2px rgba(15,23,42,0.04), 0 10px 28px rgba(15,23,42,0.06);
@@ -78,13 +78,29 @@
   --dur-slow: 480ms;
 
   --radius: 16px;
+
+  /* ════════ FERRARI INSTRUMENT CLUSTER ════════
+     Dark carbon pods · Giallo→Amber→Rosso sweep   */
+  --carbon:    #0a0a0d;   /* pod base, deep black            */
+  --carbon-2:  #131318;   /* gauge well / raised panel       */
+  --carbon-3:  #1f1f27;   /* hairlines, unlit ticks          */
+  --carbon-line: rgba(255,255,255,0.07);
+  --giallo:    #ffe400;   /* Giallo Modena — low end + brand */
+  --giallo-dim:#c9b400;
+  --amber:     #ff9000;   /* mid sweep                       */
+  --rosso:     #ff1e00;   /* Rosso Corsa — redline           */
+  --rosso-deep:#b00000;
+  --ice:       #f3f5fb;   /* digital readout                 */
+  --steel:     #828b9c;   /* muted instrument labels         */
+  --font-digital: 'Rajdhani', 'Inter', system-ui, sans-serif;
 }
 
 *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
 
 body {
   background:
-    radial-gradient(1100px 560px at 50% -8%, #f6f9fd 0%, rgba(246,249,253,0) 62%),
+    radial-gradient(1200px 620px at 50% -12%, #16141a 0%, rgba(22,20,26,0) 60%),
+    radial-gradient(900px 500px at 50% 120%, #120c0c 0%, rgba(18,12,12,0) 55%),
     var(--bg-page);
   background-attachment: fixed;
   color: var(--text-primary);
@@ -617,9 +633,9 @@ body {
   padding: 8px 10px; border-radius: 9px; margin-bottom: 6px;
   font-size: 0.78rem; font-weight: 600; border: 1px solid;
 }
-.loc-perm-item.perm-ok { background: rgba(21,128,61,.08); border-color: rgba(21,128,61,.25); color: #166534; }
-.loc-perm-item.perm-denied { background: rgba(220,38,38,.08); border-color: rgba(220,38,38,.25); color: #991b1b; }
-.loc-perm-item.perm-unknown { background: rgba(217,119,6,.08); border-color: rgba(217,119,6,.25); color: #92400e; }
+.loc-perm-item.perm-ok { background: rgba(21,128,61,.08); border-color: rgba(21,128,61,.25); color: #5fe08a; }
+.loc-perm-item.perm-denied { background: rgba(220,38,38,.08); border-color: rgba(220,38,38,.25); color: #ff7a7a; }
+.loc-perm-item.perm-unknown { background: rgba(217,119,6,.08); border-color: rgba(217,119,6,.25); color: #fbbf24; }
 .loc-perm-icon { font-size: 0.85rem; flex-shrink: 0; }
 .loc-perm-text { flex: 1; }
 .loc-perm-status { font-size: 0.68rem; opacity: 0.8; }
@@ -672,18 +688,209 @@ body {
 a.np-logo { text-decoration: none; transition: color var(--dur) var(--ease-out); }
 a.np-logo:hover { color: var(--ping-color); }
 .app-credit {
-  margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;
-  font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted);
+  margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+  font-family: var(--font-mono); font-size: 0.90rem; color: var(--text-muted);
 }
-.app-credit-sep { color: var(--text-light); }
+.app-credit-sep { color: var(--text-light); font-size: 1.3rem; }
 .app-credit a {
-  color: var(--ping-mid); text-decoration: none; font-weight: 600;
-  display: inline-flex; align-items: center; gap: 6px;
-  transition: color var(--dur) var(--ease-out);
+  text-decoration: none; font-weight: 800;
+  font-size: 1.05rem; letter-spacing: 0.3px;
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(90deg, #ff1e00, #ff9000 45%, #ffe400);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  filter: drop-shadow(0 0 10px rgba(255,144,0,0.4));
+  transition: filter var(--dur) var(--ease-out), transform var(--dur) var(--ease-out);
 }
-.app-credit a:hover { color: var(--ping-color); text-decoration: underline; }
-.app-credit a i { font-size: 0.62rem; }
+.app-credit a:hover {
+  filter: drop-shadow(0 0 16px rgba(255,30,0,0.65));
+  transform: translateY(-1px);
+}
+.app-credit a i {
+  font-size: 0.95rem;
+  -webkit-text-fill-color: #ffd21e; color: #ffd21e;   /* keep the arrow icon visible */
+}
+
+/* ════════════════════════════════════════════════════════════
+   FERRARI INSTRUMENT CLUSTER
+   The three metric cards become carbon-fibre gauge pods with a
+   Giallo→Amber→Rosso rev sweep, a shift-light strip and a thin
+   red needle. Declared last so it wins over the base card rules.
+   IDs and the updateSpeedo/cycleUnit contract are preserved.
+════════════════════════════════════════════════════════════ */
+
+/* ── The pod ──────────────────────────────────────────────── */
+.ping-card, .dl-card, .ul-card {
+  background:
+    repeating-linear-gradient(45deg,  rgba(255,255,255,0.016) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(-45deg, rgba(0,0,0,0.18) 0 1px, transparent 1px 4px),
+    radial-gradient(130% 80% at 50% -8%, rgba(255,144,0,0.07), transparent 58%),
+    linear-gradient(180deg, #15151b 0%, #0d0d12 58%, #08080c 100%);
+  border: 1px solid #26262f;
+  border-radius: 20px;
+  padding: 18px 17px 15px;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.05) inset,
+    0 -1px 0 rgba(0,0,0,0.6) inset,
+    0 26px 60px rgba(0,0,0,0.55);
+}
+.ping-card:hover, .dl-card:hover, .ul-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--rosso);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.06) inset,
+    0 -1px 0 rgba(0,0,0,0.6) inset,
+    0 30px 72px rgba(0,0,0,0.62),
+    0 0 0 1px var(--rosso),
+    0 0 22px rgba(255,30,0,0.45);
+}
+/* ignition strip across the top */
+.ping-card::before, .dl-card::before, .ul-card::before {
+  height: 2px; opacity: 0.95;
+  background: linear-gradient(90deg, var(--giallo), var(--amber) 52%, var(--rosso));
+}
+.ping-card:hover::before, .dl-card:hover::before, .ul-card:hover::before { opacity: 1; }
+.ping-card::after, .dl-card::after, .ul-card::after { display: none; }
+
+/* ── Instrument label ─────────────────────────────────────── */
+.ping-card .metric-label, .dl-card .metric-label, .ul-card .metric-label {
+  font-family: var(--font-digital);
+  font-size: 0.82rem; font-weight: 600;
+  letter-spacing: 0.20em; text-transform: uppercase;
+  color: var(--steel); margin-bottom: 4px;
+}
+.ping-card .metric-label i, .dl-card .metric-label i, .ul-card .metric-label i {
+  color: var(--giallo);
+  filter: drop-shadow(0 0 5px rgba(255,228,0,0.35));
+}
+
+/* ── Shift-light strip ────────────────────────────────────── */
+.shift-lights {
+  display: flex; gap: 4px; justify-content: center; align-items: center;
+  height: 9px; margin: 3px 0 4px;
+}
+.shift-led {
+  width: 13px; height: 5px; border-radius: 2px;
+  background: #181820;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+  transition: background 0.1s linear, box-shadow 0.1s linear;
+}
+@keyframes ledBlink { 0%,100% { opacity: 1; } 50% { opacity: 0.18; } }
+.shift-led.blink { animation: ledBlink 0.16s steps(1) infinite; }
+
+/* ── Gauge stage + centred digital readout ────────────────── */
+.gauge-stage { position: relative; width: 100%; display: flex; justify-content: center; flex: 1 1 auto; align-items: center; }
+.speedo-wrap { padding: 0; }
+.speedo-svg { max-width: 256px; }
+
+.speedo-readout {
+  position: absolute; left: 50%; top: 54%;
+  transform: translate(-50%, -50%);
+  text-align: center; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+}
+.ping-card .metric-value, .dl-card .metric-value, .ul-card .metric-value {
+  font-family: var(--font-digital);
+  font-weight: 700; line-height: 0.9;
+  font-size: clamp(2rem, 5.2vw, 2.9rem);
+  letter-spacing: 0.5px;
+  color: var(--ice);
+  text-shadow: 0 0 16px rgba(255,144,0,0.28);
+}
+.readout-unit {
+  font-family: var(--font-mono); font-size: 0.62rem; font-weight: 600;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--steel);
+  margin-top: 2px;
+}
+
+/* ── Gauge SVG elements ───────────────────────────────────── */
+.speedo-track { fill: none; stroke: #1b1b23; stroke-linecap: round; }
+.speedo-value-arc {
+  fill: none; stroke-linecap: round;
+  filter: drop-shadow(0 0 5px rgba(255,144,0,0.5));
+  transition: stroke-dashoffset 0.85s cubic-bezier(0.34, 1.18, 0.55, 1);
+}
+.gauge-stage.redline .speedo-value-arc { filter: drop-shadow(0 0 11px rgba(255,30,0,0.9)); }
+
+.speedo-needle-g {
+  transform-origin: 120px 116px;
+  transition: transform 0.85s cubic-bezier(0.34, 1.42, 0.5, 1);
+}
+.speedo-needle-poly {
+  fill: var(--rosso);
+  filter: drop-shadow(0 0 3px rgba(255,30,0,0.85));
+}
+.speedo-hub     { fill: #2b2b34; stroke: #0a0a0d; stroke-width: 1; }
+.speedo-hub-dot { fill: var(--giallo); }
+
+/* faint ambient pool behind the dial; flares red at the redline */
+.gauge-stage::after {
+  content: ''; position: absolute; left: 50%; top: 50%;
+  width: 62%; height: 62%; transform: translate(-50%, -46%);
+  border-radius: 50%; pointer-events: none; z-index: -1;
+  background: radial-gradient(circle, rgba(255,144,0,0.10), transparent 70%);
+  transition: background 0.4s var(--ease-out);
+}
+.gauge-stage.redline::after { background: radial-gradient(circle, rgba(255,30,0,0.22), transparent 72%); }
+
+/* ── Unit control + scale hint (below the dial) ───────────── */
+.speedo-unit-row { margin-top: 2px; }
+.speedo-unit-pill {
+  background: var(--carbon-2); border: 1px solid #2d2d38;
+  color: var(--steel); font-family: var(--font-digital);
+  font-weight: 600; letter-spacing: 0.12em;
+}
+.speedo-unit-pill:hover { background: #1e1e26; color: var(--ice); }
+.dl-card .speedo-unit-pill:hover { border-color: var(--amber); color: var(--amber); }
+.ul-card .speedo-unit-pill:hover { border-color: var(--amber); color: var(--amber); }
+.speedo-unit-pill i { color: var(--giallo); opacity: 0.8; }
+.speedo-scale-hint { color: var(--steel); }
+
+/* ── Telemetry strip ──────────────────────────────────────── */
+.ping-card .metric-stats, .dl-card .metric-stats, .ul-card .metric-stats {
+  border-top: 1px solid #23232d; margin-top: 10px; padding-top: 10px;
+}
+.ping-card .stat-lbl, .dl-card .stat-lbl, .ul-card .stat-lbl { color: var(--steel); }
+.ping-card .stat-val, .dl-card .stat-val, .ul-card .stat-val {
+  color: #ffd24a; text-shadow: 0 0 10px rgba(255,210,74,0.18);
+}
+
+/* ════════ Dark-theme patches for supporting surfaces ════════ */
+.np-logo-dot { background: var(--rosso); box-shadow: 0 0 0 4px rgba(255,30,0,0.16); }
+a.np-logo:hover { color: var(--giallo); }
+.np-header-sep { color: #545462; }
+
+.btn-settings { background: var(--carbon-2); color: var(--text-primary); border-color: var(--border); }
+.btn-settings:hover { border-color: var(--giallo-dim); color: var(--giallo); box-shadow: 0 6px 18px rgba(255,228,0,0.12); }
+
+.live-ticker {
+  background: linear-gradient(90deg, rgba(255,30,0,0.08), rgba(255,144,0,0.03));
+  border: 1px solid rgba(255,80,0,0.22); color: var(--text-muted);
+}
+.ticker-dot { background: var(--rosso); box-shadow: 0 0 0 3px rgba(255,30,0,0.22); }
+
+.srv-bar-wrap { background: #23232d; }
+.settings-panel { background: var(--carbon-2); border: 1px solid var(--border); box-shadow: 0 -10px 44px rgba(0,0,0,0.5); }
+@media(min-width:768px){ .settings-panel { box-shadow: -10px 0 44px rgba(0,0,0,0.5); } }
+.toggle-slider { background: #23232d; border: 1px solid #33333d; }
+.toggle-slider::after { background: #6b7280; }
+.interval-slider { background: #23232d; }
+.loading-bar-wrap { background: #1c1c24; }
+.loading-bar { background: linear-gradient(90deg, var(--giallo), var(--rosso)); }
+::-webkit-scrollbar-thumb { background: #2c2c36; }
+::-webkit-scrollbar-thumb:hover { background: #3c3c46; }
+
+/* brighter quality badges on dark */
+.q-excellent { color: #34d399; border-color: rgba(52,211,153,.5);  background: rgba(52,211,153,.10); }
+.q-good      { color: #86efac; border-color: rgba(134,239,172,.4); background: rgba(134,239,172,.09); }
+.q-fair      { color: #fbbf24; border-color: rgba(251,191,36,.45); background: rgba(251,191,36,.10); }
+.q-poor      { color: #ff6b6b; border-color: rgba(255,107,107,.45); background: rgba(255,107,107,.10); }
+
+@media (max-width: 575.98px) {
+  .ping-card, .dl-card, .ul-card { padding: 16px 14px 14px; }
+  .shift-led { width: 11px; }
+}
 </style>
 </head>
 <body>
@@ -743,10 +950,22 @@ a.np-logo:hover { color: var(--ping-color); }
     <div class="col-12 col-md-4 widget-section" id="widget-ping">
       <div class="metric-card ping-card fade-in" role="group" aria-label="Ping latency">
         <div class="metric-label"><i class="fas fa-satellite-dish me-1"></i>Ping Latency<span class="ms-auto" id="pingQuality"></span></div>
-        <div class="glow-ring-wrap">
-          <div class="glow-ring ping-ring">
-            <div class="metric-value" id="pingVal">--</div>
-            <div class="metric-unit">milliseconds</div>
+        <div class="shift-lights" id="pingShift" aria-hidden="true"></div>
+        <div class="speedo-wrap">
+          <div class="gauge-stage" id="pingStage">
+            <svg id="pingSpeedoSVG" class="speedo-svg" viewBox="0 0 240 218" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <g id="pingSegments"></g>
+              <g id="pingNeedle" class="speedo-needle-g" style="transform:rotate(-126deg)">
+                <polygon class="speedo-needle-poly" points="120,33 123.2,63 120,71 116.8,63"/>
+              </g>
+            </svg>
+            <div class="speedo-readout">
+              <div class="metric-value" id="pingVal">--</div>
+              <div class="readout-unit">ms</div>
+            </div>
+          </div>
+          <div class="speedo-unit-row">
+            <span class="speedo-scale-hint" id="pingScaleHint">0–200 ms</span>
           </div>
         </div>
         <div class="sparkline-wrap"><canvas id="pingSparkline" aria-hidden="true"></canvas></div>
@@ -763,25 +982,24 @@ a.np-logo:hover { color: var(--ping-color); }
       <div class="metric-card dl-card fade-in" style="animation-delay:.08s" role="group" aria-label="Download speed">
         <div class="metric-label"><i class="fas fa-arrow-down me-1"></i>Download Speed<span class="ms-auto" id="dlQuality"></span></div>
 
-        <!-- Speedometer -->
+        <!-- Ferrari tachometer -->
+        <div class="shift-lights" id="dlShift" aria-hidden="true"></div>
         <div class="speedo-wrap">
-          <svg id="dlSpeedoSVG" class="speedo-svg" viewBox="0 0 220 130" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <g id="dlTrack"></g>
-            <g id="dlSegments"></g>
-            <g id="dlTicks"></g>
-            <g id="dlNeedle" class="speedo-needle-g" style="transform:rotate(-90deg)">
-              <polygon class="speedo-needle-poly" points="108.5,118 111.5,118 110,41"/>
-              <circle cx="110" cy="118" r="9" class="speedo-hub"/>
-              <circle cx="110" cy="118" r="4" class="speedo-hub-dot"/>
-            </g>
-          </svg>
-          <div class="speedo-val-row">
-            <div class="metric-value" id="dlVal">--</div>
+          <div class="gauge-stage" id="dlStage">
+            <svg id="dlSpeedoSVG" class="speedo-svg" viewBox="0 0 240 218" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <g id="dlSegments"></g>
+              <g id="dlNeedle" class="speedo-needle-g" style="transform:rotate(-126deg)">
+                <polygon class="speedo-needle-poly" points="120,33 123.2,63 120,71 116.8,63"/>
+              </g>
+            </svg>
+            <div class="speedo-readout">
+              <div class="metric-value" id="dlVal">--</div>
+              <div class="readout-unit" id="dlUnit">Mbps</div>
+            </div>
           </div>
           <div class="speedo-unit-row">
-            <button class="speedo-unit-pill" id="dlUnitPill" onclick="cycleUnit('dl')" title="Click to switch unit">
-              <span class="speedo-unit-name" id="dlUnit">Mbps</span>
-              <i class="fas fa-arrows-rotate"></i>
+            <button class="speedo-unit-pill" id="dlUnitPill" onclick="cycleUnit('dl')" title="Switch unit">
+              <i class="fas fa-arrows-rotate"></i><span>Unit</span>
             </button>
             <span class="speedo-scale-hint" id="dlScaleHint">0–100 Mbps</span>
           </div>
@@ -800,25 +1018,24 @@ a.np-logo:hover { color: var(--ping-color); }
       <div class="metric-card ul-card fade-in" style="animation-delay:.16s" role="group" aria-label="Upload speed">
         <div class="metric-label"><i class="fas fa-arrow-up me-1"></i>Upload Speed<span class="ms-auto" id="ulQuality"></span></div>
 
-        <!-- Speedometer -->
+        <!-- Ferrari tachometer -->
+        <div class="shift-lights" id="ulShift" aria-hidden="true"></div>
         <div class="speedo-wrap">
-          <svg id="ulSpeedoSVG" class="speedo-svg" viewBox="0 0 220 130" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <g id="ulTrack"></g>
-            <g id="ulSegments"></g>
-            <g id="ulTicks"></g>
-            <g id="ulNeedle" class="speedo-needle-g" style="transform:rotate(-90deg)">
-              <polygon class="speedo-needle-poly" points="108.5,118 111.5,118 110,41"/>
-              <circle cx="110" cy="118" r="9" class="speedo-hub"/>
-              <circle cx="110" cy="118" r="4" class="speedo-hub-dot"/>
-            </g>
-          </svg>
-          <div class="speedo-val-row">
-            <div class="metric-value" id="ulVal">--</div>
+          <div class="gauge-stage" id="ulStage">
+            <svg id="ulSpeedoSVG" class="speedo-svg" viewBox="0 0 240 218" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <g id="ulSegments"></g>
+              <g id="ulNeedle" class="speedo-needle-g" style="transform:rotate(-126deg)">
+                <polygon class="speedo-needle-poly" points="120,33 123.2,63 120,71 116.8,63"/>
+              </g>
+            </svg>
+            <div class="speedo-readout">
+              <div class="metric-value" id="ulVal">--</div>
+              <div class="readout-unit" id="ulUnit">Mbps</div>
+            </div>
           </div>
           <div class="speedo-unit-row">
-            <button class="speedo-unit-pill" id="ulUnitPill" onclick="cycleUnit('ul')" title="Click to switch unit">
-              <span class="speedo-unit-name" id="ulUnit">Mbps</span>
-              <i class="fas fa-arrows-rotate"></i>
+            <button class="speedo-unit-pill" id="ulUnitPill" onclick="cycleUnit('ul')" title="Switch unit">
+              <i class="fas fa-arrows-rotate"></i><span>Unit</span>
             </button>
             <span class="speedo-scale-hint" id="ulScaleHint">0–50 Mbps</span>
           </div>
@@ -1062,6 +1279,7 @@ const S = {
   ulUnitIdx:  0,
   dlMaxScale: 100,    // Mbps auto-scales up as speed grows
   ulMaxScale: 50,     // Mbps
+  pingMaxScale: 200,  // ms  auto-scales up if latency spikes
   dlLastMbps: null,   // last raw Mbps for re-render on unit switch
   ulLastMbps: null,
 };
@@ -1799,122 +2017,155 @@ function cycleUnit(type) {
   }
 }
 
-/* ── Speedometer SVG builder ──
-   cx=110, cy=118, Ro=96 (outer), Ri=63 (inner)
-   Needle pivot at (110,118). 12 segments × 13°, 2° gaps.
-   Math angles: 0°=right, 90°=up (standard math, y-flipped in SVG). ── */
-const SPD = { cx:110, cy:118, ro:96, ri:63 };
+/* ── Ferrari tachometer engine ──────────────────────────────
+   252° sweep. Centre (120,116). Arc R=84, stroke 14.
+   Rest angle −126° (lower-left); redline at lower-right.
+   Math angles: 0°=right, 90°=up (y flipped for SVG).        ── */
+const SPD = { cx:120, cy:116, R:84, STROKE:14, NUM_R:106, A0:216, SWEEP:252, LEDS:10 };
 
-function speedoPt(r, angleDeg) {
-  const rad = angleDeg * Math.PI / 180;
-  return [ +(SPD.cx + r * Math.cos(rad)).toFixed(2),
-           +(SPD.cy - r * Math.sin(rad)).toFixed(2) ];
+function spdPt(r, aDeg) {
+  const a = aDeg * Math.PI / 180;
+  return [ +(SPD.cx + r * Math.cos(a)).toFixed(2),
+           +(SPD.cy - r * Math.sin(a)).toFixed(2) ];
+}
+// math angle for a 0..1 fraction along the sweep
+function spdAngle(frac) { return SPD.A0 - frac * SPD.SWEEP; }
+// full-sweep arc path at radius r (major arc, clockwise on screen through the top)
+function spdArcPath(r) {
+  const [x1, y1] = spdPt(r, SPD.A0);
+  const [x2, y2] = spdPt(r, SPD.A0 - SPD.SWEEP);
+  return `M${x1},${y1} A${r},${r} 0 1,1 ${x2},${y2}`;
 }
 
-// Donut arc path: outer arc from a1→a2 (CW in SVG through top), inner arc back
-function speedoArcPath(ro, ri, a1, a2) {
-  const [ox1, oy1] = speedoPt(ro, a1);
-  const [ox2, oy2] = speedoPt(ro, a2);
-  const [ix1, iy1] = speedoPt(ri, a1);
-  const [ix2, iy2] = speedoPt(ri, a2);
-  // outer arc: from a1→a2 clockwise (sweep=1) goes through top for our left-to-right gauge
-  // inner arc: from a2→a1 counterclockwise (sweep=0) closes segment back
-  return `M${ox1},${oy1} A${ro},${ro} 0 0,1 ${ox2},${oy2} L${ix2},${iy2} A${ri},${ri} 0 0,0 ${ix1},${iy1} Z`;
+function spdScaleFor(type) {
+  return type === 'dl' ? S.dlMaxScale : type === 'ul' ? S.ulMaxScale : S.pingMaxScale;
 }
 
 function buildSpeedoSVG(type) {
-  const isDL = type === 'dl';
-
-  // 12 segment colors left (slow) = light, right (fast) = saturated
-  const DL_COLORS = ['#dbeafe','#bfdbfe','#93c5fd','#60a5fa','#3b82f6','#2563eb','#1d4ed8','#1e40af','#1e3a8a','#172554','#102040','#0b172e'];
-  const UL_COLORS = ['#fff7ed','#ffedd5','#fed7aa','#fdba74','#fb923c','#f97316','#ea580c','#dc2626','#c2410c','#9a3412','#7c2d12','#5a1006'];
-  const colors = isDL ? DL_COLORS : UL_COLORS;
-  const id = type;
-
+  const id    = type;
+  const scale = spdScaleFor(type);
+  const arc   = spdArcPath(SPD.R);
+  const RED   = 0.82;                       // redline tint threshold for ticks/numerals
   let svg = '';
 
-  // ── Background track (full 184° so it slightly extends past segment edges)
-  const bgPath = speedoArcPath(SPD.ro + 2, SPD.ri - 2, 182, -2);
-  svg += `<path d="${bgPath}" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="0.5"/>`;
+  // gradient: giallo → amber → rosso along the sweep
+  svg += `<defs><linearGradient id="${id}ArcGrad" x1="0" y1="0" x2="1" y2="0">`
+       + `<stop offset="0" stop-color="#ffe400"/>`
+       + `<stop offset="0.5" stop-color="#ff9000"/>`
+       + `<stop offset="1" stop-color="#ff1e00"/></linearGradient></defs>`;
 
-  // ── 12 colored segments
-  for (let i = 0; i < 12; i++) {
-    const a1 = 180 - i * 15;       // start angle (math degrees)
-    const a2 = a1 - 13;            // end angle (13° of fill, 2° gap)
-    const path = speedoArcPath(SPD.ro, SPD.ri, a1, a2);
-    svg += `<path d="${path}" fill="${colors[i]}" opacity="0.92" stroke="white" stroke-width="1"/>`;
+  // unlit track + value arc (revealed via stroke-dashoffset)
+  svg += `<path class="speedo-track" d="${arc}" stroke-width="${SPD.STROKE}"/>`;
+  svg += `<path id="${id}ValueArc" class="speedo-value-arc" d="${arc}" `
+       + `stroke="url(#${id}ArcGrad)" stroke-width="${SPD.STROKE}" `
+       + `pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>`;
+
+  // tick marks: 12 major divisions (+ minor midpoints)
+  const outer = SPD.R + SPD.STROKE / 2 + 2;          // 93
+  for (let i = 0; i <= 12; i++) {
+    const f = i / 12, a = spdAngle(f);
+    const [mx1, my1] = spdPt(outer, a);
+    const [mx2, my2] = spdPt(outer + 6, a);          // 93 → 99
+    const col = f >= RED ? '#ff3a1e' : '#9aa3b4';
+    svg += `<line x1="${mx1}" y1="${my1}" x2="${mx2}" y2="${my2}" stroke="${col}" stroke-width="1.7" stroke-linecap="round"/>`;
+    if (i < 12) {
+      const fm = (i + 0.5) / 12, am = spdAngle(fm);
+      const [nx1, ny1] = spdPt(outer, am);
+      const [nx2, ny2] = spdPt(outer + 3, am);       // 93 → 96
+      const cm = fm >= RED ? 'rgba(255,58,30,0.7)' : 'rgba(154,163,180,0.45)';
+      svg += `<line x1="${nx1}" y1="${ny1}" x2="${nx2}" y2="${ny2}" stroke="${cm}" stroke-width="1.1" stroke-linecap="round"/>`;
+    }
   }
 
-  // ── 5 scale tick marks at 0%, 25%, 50%, 75%, 100% of gauge
-  // Angles: 180°, 135°, 90°, 45°, 0°
-  [180, 135, 90, 45, 0].forEach((a, k) => {
-    const [x1, y1] = speedoPt(SPD.ro + 4, a);
-    const [x2, y2] = speedoPt(SPD.ro + 11, a);
-    const tickColor = k === 0 || k === 4 ? '#475569' : '#94a3b8';
-    svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${tickColor}" stroke-width="1.5" stroke-linecap="round"/>`;
-  });
-
-  // ── Tick labels: 0 at left, MAX at right, % labels at extremes
-  const [lx, ly] = speedoPt(SPD.ro + 20, 180);
-  const [rx, ry] = speedoPt(SPD.ro + 20, 0);
-  const [tx, ty] = speedoPt(SPD.ro + 22, 90);
-  svg += `<text x="${lx}" y="${ly+3}" text-anchor="middle" font-family="Courier New,monospace" font-size="8" font-weight="700" fill="#64748b">0</text>`;
-  svg += `<text x="${rx}" y="${ry+3}" text-anchor="middle" font-family="Courier New,monospace" font-size="8" font-weight="700" fill="#64748b" id="${id}MaxLabel">100</text>`;
-  svg += `<text x="${tx}" y="${ty}" text-anchor="middle" font-family="Courier New,monospace" font-size="7" fill="#94a3b8" id="${id}MidLabel">50</text>`;
-
-  // ── Outer ring border lines to close the gauge at 0° and 180°
-  // (tiny radial lines where the gauge ends)
-  const gaugeBorderColor = '#cbd5e1';
-  [[180], [0]].forEach(([a]) => {
-    const [bx1, by1] = speedoPt(SPD.ri - 3, a);
-    const [bx2, by2] = speedoPt(SPD.ro + 3, a);
-    svg += `<line x1="${bx1}" y1="${by1}" x2="${bx2}" y2="${by2}" stroke="${gaugeBorderColor}" stroke-width="1"/>`;
+  // numerals at 0 / 25 / 50 / 75 / 100 %
+  const marks = [
+    { f: 0,    idn: `${id}MinLabel`, v: 0 },
+    { f: 0.25, idn: `${id}Q1Label`,  v: Math.round(scale * 0.25) },
+    { f: 0.5,  idn: `${id}MidLabel`, v: Math.round(scale * 0.5) },
+    { f: 0.75, idn: `${id}Q3Label`,  v: Math.round(scale * 0.75) },
+    { f: 1,    idn: `${id}MaxLabel`, v: scale },
+  ];
+  marks.forEach(m => {
+    const [tx, ty] = spdPt(SPD.NUM_R, spdAngle(m.f));
+    const col = m.f >= RED ? '#ff5436' : '#aeb6c4';
+    svg += `<text id="${m.idn}" x="${tx}" y="${ty}" text-anchor="middle" dominant-baseline="middle" `
+         + `font-family="Rajdhani,sans-serif" font-size="11" font-weight="600" fill="${col}">${m.v}</text>`;
   });
 
   return svg;
 }
 
 function initSpeedos() {
-  ['dl', 'ul'].forEach(type => {
-    const trackEl = document.getElementById(`${type}Track`);
-    const segsEl  = document.getElementById(`${type}Segments`);
-    const tickEl  = document.getElementById(`${type}Ticks`);
-    if (!segsEl) return;
+  ['ping', 'dl', 'ul'].forEach(type => {
+    const segsEl = document.getElementById(`${type}Segments`);
+    if (segsEl) segsEl.innerHTML = buildSpeedoSVG(type);
 
-    // Inject the static SVG content (track, segments, ticks, labels)
-    const content = buildSpeedoSVG(type);
-    // Split into track+bg, segments, ticks put it all in the segsEl for simplicity
-    segsEl.innerHTML = content;
-
-    // Needle starts at 0 (pointing left)
     const needle = document.getElementById(`${type}Needle`);
-    if (needle) needle.style.transform = 'rotate(-90deg)';
+    if (needle) needle.style.transform = 'rotate(-126deg)';
+
+    // build the LED shift-light strip
+    const shift = document.getElementById(`${type}Shift`);
+    if (shift && !shift.childElementCount) {
+      let leds = '';
+      for (let i = 0; i < SPD.LEDS; i++) leds += '<span class="shift-led"></span>';
+      shift.innerHTML = leds;
+    }
   });
 }
 
-function updateSpeedo(type, mbps) {
-  const needle   = document.getElementById(`${type}Needle`);
-  const maxScale = type === 'dl' ? S.dlMaxScale : S.ulMaxScale;
+function updateSpeedo(type, value) {
+  const needle = document.getElementById(`${type}Needle`);
   if (!needle) return;
 
-  // Auto-scale up: if reading > 80% of current ceiling, raise ceiling
-  if (mbps != null && mbps > maxScale * 0.80) {
-    const newMax = Math.ceil(mbps * 1.6 / 10) * 10;   // round up to nearest 10 Mbps
-    if (type === 'dl') { S.dlMaxScale = newMax; }
-    else               { S.ulMaxScale = newMax; }
-    // Update scale labels in SVG
-    const maxLabel = document.getElementById(`${type}MaxLabel`);
-    const midLabel = document.getElementById(`${type}MidLabel`);
-    if (maxLabel) maxLabel.textContent = newMax;
-    if (midLabel) midLabel.textContent = Math.round(newMax / 2);
-    st(`${type}ScaleHint`, `0–${newMax} Mbps`);
+  const unit = type === 'ping' ? 'ms' : 'Mbps';
+  const step = type === 'ping' ? 50 : 10;
+  let scale  = spdScaleFor(type);
+
+  // auto-scale up when the reading nears the ceiling
+  if (value != null && value > scale * 0.85) {
+    const newMax = Math.ceil(value * 1.5 / step) * step;
+    if (type === 'dl')      S.dlMaxScale = newMax;
+    else if (type === 'ul') S.ulMaxScale = newMax;
+    else                    S.pingMaxScale = newMax;
+    scale = newMax;
+    st(`${type}MaxLabel`, newMax);
+    st(`${type}Q3Label`,  Math.round(newMax * 0.75));
+    st(`${type}MidLabel`, Math.round(newMax * 0.5));
+    st(`${type}Q1Label`,  Math.round(newMax * 0.25));
+    st(`${type}ScaleHint`, `0–${newMax} ${unit}`);
   }
 
-  const scale    = type === 'dl' ? S.dlMaxScale : S.ulMaxScale;
-  const fraction = mbps == null ? 0 : Math.min(1, Math.max(0, mbps / scale));
-  // -90° = 0 speed (pointing left), +90° = max speed (pointing right)
-  const rotation = -90 + fraction * 180;
-  needle.style.transform = `rotate(${rotation.toFixed(2)}deg)`;
+  const frac = value == null ? 0 : Math.min(1, Math.max(0, value / scale));
+
+  // needle + value arc move together across the 252° sweep
+  needle.style.transform = `rotate(${(-126 + frac * 252).toFixed(2)}deg)`;
+  const valArc = document.getElementById(`${type}ValueArc`);
+  if (valArc) valArc.style.strokeDashoffset = (100 - frac * 100).toFixed(2);
+
+  // shift lights: green → yellow → red, blinking at the redline
+  const redline = frac >= 0.9;
+  const lit = Math.round(frac * SPD.LEDS);
+  const shift = document.getElementById(`${type}Shift`);
+  if (shift) {
+    const leds = shift.children;
+    for (let i = 0; i < leds.length; i++) {
+      const on = i < lit;
+      const ledFrac = (i + 1) / SPD.LEDS;
+      let c = '#181820', glow = 'none', blink = false;
+      if (on) {
+        if (ledFrac <= 0.6)      { c = '#28e07a'; glow = '0 0 6px rgba(40,224,122,0.85)'; }
+        else if (ledFrac <= 0.8) { c = '#ffd21e'; glow = '0 0 6px rgba(255,210,30,0.85)'; }
+        else                     { c = '#ff1e00'; glow = '0 0 7px rgba(255,30,0,0.95)'; blink = redline; }
+      }
+      leds[i].style.background = c;
+      leds[i].style.boxShadow  = on ? `inset 0 0 0 1px rgba(255,255,255,0.06), ${glow}` : 'inset 0 0 0 1px rgba(255,255,255,0.05)';
+      leds[i].classList.toggle('blink', blink);
+    }
+  }
+
+  // redline glow on the whole pod
+  const stage = document.getElementById(`${type}Stage`);
+  if (stage) stage.classList.toggle('redline', redline);
 }
 
 /* ════════════════════════════════════
@@ -1967,6 +2218,7 @@ function flushUI(){
   /* PING */
   if(ping!=null){
     st('pingVal',ping);
+    updateSpeedo('ping', ping);
     sh('pingQuality',qualityBadge('ping',ping));
     S.pingSum+=ping; S.pingCount++;
     if(ping<S.pingMin)S.pingMin=ping;
@@ -2481,8 +2733,9 @@ async function fetchIPInfo() {
 
 }());
 (async function initPage() {
-  // Build speedometers (DL + UL) must run after DOM is ready
+  // Build tachometers (ping + DL + UL) — must run after DOM is ready
   initSpeedos();
+  st('pingScaleHint', `0–${S.pingMaxScale} ms`);
   st('dlScaleHint', `0–${S.dlMaxScale} Mbps`);
   st('ulScaleHint', `0–${S.ulMaxScale} Mbps`);
 
